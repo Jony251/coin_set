@@ -24,6 +24,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -31,10 +32,13 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.*
 import com.example.coinset.ui.theme.CoinSetTheme
 import com.google.firebase.FirebaseApp
+import com.google.firebase.Timestamp
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
+import java.text.SimpleDateFormat
+import java.util.*
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -74,6 +78,7 @@ fun MainApp() {
         composable("coin_detail/{coinId}") { backStackEntry ->
             CoinDetailScreen(navController, backStackEntry.arguments?.getString("coinId") ?: "")
         }
+        composable("premium") { PremiumScreen(navController) }
     }
 }
 
@@ -91,7 +96,7 @@ fun MainScreen(parentNavController: NavController) {
             }
         }
     ) { innerPadding ->
-        NavHost(navController = bottomNavController, startDestination = "catalog_root", modifier = Modifier.padding(innerPadding)) {
+        NavHost(navController = bottomNavController, startDestination = "my_collection", modifier = Modifier.padding(innerPadding)) {
             composable("catalog_root") { CountryListScreen(parentNavController) }
             composable("my_collection") { MyCollectionScreen(parentNavController) }
             composable("settings") { SettingsScreen(parentNavController) }
@@ -427,7 +432,20 @@ fun InfoRow(label: String, value: String) {
 
 @Composable
 fun SettingsScreen(navController: NavController) {
-    val user = Firebase.auth.currentUser
+    val db = Firebase.firestore
+    val userId = Firebase.auth.currentUser?.uid
+    var isPro by remember { mutableStateOf(false) }
+    var isLoading by remember { mutableStateOf(true) }
+
+    LaunchedEffect(userId) {
+        if (userId != null) {
+            db.collection("users").document(userId).get().addOnSuccessListener { doc ->
+                isPro = doc.getBoolean("isPro") ?: false
+                isLoading = false
+            }.addOnFailureListener { isLoading = false }
+        }
+    }
+
     Column(Modifier.fillMaxSize().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         Image(
             painter = painterResource(id = R.drawable.icon),
@@ -437,9 +455,94 @@ fun SettingsScreen(navController: NavController) {
         )
         Spacer(Modifier.height(16.dp))
         Text("Ваш профиль", style = MaterialTheme.typography.headlineMedium)
-        Text("Email: ${user?.email}", color = MaterialTheme.colorScheme.secondary)
+        Text("Email: ${Firebase.auth.currentUser?.email}", color = MaterialTheme.colorScheme.secondary)
+        
+        Spacer(Modifier.height(24.dp))
+        
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Row(Modifier.padding(16.dp).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Column {
+                    Text("Статус аккаунта", fontWeight = FontWeight.Bold)
+                    Text(if (isPro) "PRO версия активна" else "Бесплатная версия")
+                }
+                if (!isPro && !isLoading) {
+                    Button(onClick = { navController.navigate("premium") }) { Text("Купить PRO") }
+                } else if (isPro) {
+                    Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color.Green)
+                }
+            }
+        }
+
         Spacer(Modifier.height(32.dp))
-        Button(onClick = { Firebase.auth.signOut(); navController.navigate("login") { popUpTo(0) } }, modifier = Modifier.fillMaxWidth()) { Text("Выйти из аккаунта") }
+        Button(onClick = { Firebase.auth.signOut(); navController.navigate("login") { popUpTo(0) { inclusive = true } } }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.errorContainer, contentColor = MaterialTheme.colorScheme.onErrorContainer)) { Text("Выйти из аккаунта") }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PremiumScreen(navController: NavController) {
+    val db = Firebase.firestore
+    val userId = Firebase.auth.currentUser?.uid
+    val context = LocalContext.current
+    var isProcessing by remember { mutableStateOf(false) }
+
+    Scaffold(topBar = { TopAppBar(title = { Text("PRO подписка") }, navigationIcon = { IconButton(onClick = { navController.popBackStack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) } }) }) { padding ->
+        Column(Modifier.padding(padding).padding(24.dp).fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(Icons.Default.Star, contentDescription = null, modifier = Modifier.size(80.dp), tint = MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.height(16.dp))
+            Text("Coin Set PRO", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(24.dp))
+            
+            Text("Возможности PRO:", fontWeight = FontWeight.Bold, modifier = Modifier.fillMaxWidth())
+            Spacer(Modifier.height(8.dp))
+            BulletItem("Добавление заметок к монетам")
+            BulletItem("Загрузка фотографий ваших монет")
+            BulletItem("Выставление монет на продажу")
+            BulletItem("Приоритетная поддержка")
+            
+            Spacer(Modifier.weight(1f))
+            
+            Text("Стоимость: 499 руб / единоразово", style = MaterialTheme.typography.titleLarge)
+            Spacer(Modifier.height(16.dp))
+            
+            if (isProcessing) {
+                CircularProgressIndicator()
+            } else {
+                Button(
+                    onClick = {
+                        if (userId != null) {
+                            isProcessing = true
+                            // ВАЖНО: Текущие правила Firestore запрещают клиенту менять isPro.
+                            // Для теста нужно временно разрешить update или использовать Backend.
+                            db.collection("users").document(userId).update(
+                                "isPro", true,
+                                "proActivatedAt", Timestamp.now(),
+                                "updatedAt", Timestamp.now()
+                            ).addOnSuccessListener {
+                                Toast.makeText(context, "Оплата успешна! PRO активирован.", Toast.LENGTH_LONG).show()
+                                navController.popBackStack()
+                            }.addOnFailureListener { e ->
+                                isProcessing = false
+                                Toast.makeText(context, "Ошибка (проверьте правила Firestore): ${e.message}", Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth().height(56.dp)
+                ) { Text("Оплатить и активировать") }
+            }
+            
+            Spacer(Modifier.height(8.dp))
+            Text("Это симуляция оплаты для демонстрации", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+        }
+    }
+}
+
+@Composable
+fun BulletItem(text: String) {
+    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color.Green)
+        Spacer(Modifier.width(8.dp))
+        Text(text)
     }
 }
 
@@ -447,16 +550,44 @@ fun SettingsScreen(navController: NavController) {
 fun LoginScreen(navController: NavController) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var isLoading by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+
     Column(Modifier.fillMaxSize().padding(32.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
         Image(painter = painterResource(id = R.drawable.icon), contentDescription = null, modifier = Modifier.size(100.dp))
         Spacer(Modifier.height(24.dp))
         Text("Coin Set", style = MaterialTheme.typography.headlineLarge)
         Spacer(Modifier.height(32.dp))
-        TextField(email, { email = it }, label = { Text("Email") }, modifier = Modifier.fillMaxWidth())
+        TextField(email, { email = it }, label = { Text("Email") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
         Spacer(Modifier.height(8.dp))
-        TextField(password, { password = it }, label = { Text("Пароль") }, modifier = Modifier.fillMaxWidth())
+        TextField(password, { password = it }, label = { Text("Пароль") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
         Spacer(Modifier.height(24.dp))
-        Button(onClick = { Firebase.auth.signInWithEmailAndPassword(email, password).addOnSuccessListener { navController.navigate("main") } }, modifier = Modifier.fillMaxWidth()) { Text("Войти") }
+        
+        if (isLoading) {
+            CircularProgressIndicator()
+        } else {
+            Button(
+                onClick = {
+                    if (email.isNotEmpty() && password.isNotEmpty()) {
+                        isLoading = true
+                        Firebase.auth.signInWithEmailAndPassword(email, password)
+                            .addOnSuccessListener { 
+                                isLoading = false
+                                navController.navigate("main") { popUpTo("login") { inclusive = true } } 
+                            }
+                            .addOnFailureListener { 
+                                isLoading = false
+                                Toast.makeText(context, "Ошибка: ${it.message}", Toast.LENGTH_LONG)
+                                    .show() 
+                            }
+                    } else {
+                        Toast.makeText(context, "Заполните все поля", Toast.LENGTH_SHORT).show()
+                    }
+                }, 
+                modifier = Modifier.fillMaxWidth()
+            ) { Text("Войти") }
+        }
+        
         TextButton(onClick = { navController.navigate("register") }) { Text("Регистрация") }
     }
 }
@@ -465,13 +596,69 @@ fun LoginScreen(navController: NavController) {
 fun RegisterScreen(navController: NavController) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var nickname by remember { mutableStateOf("") }
+    var isLoading by remember { mutableStateOf(false) }
+    val db = Firebase.firestore
+    val context = LocalContext.current
+
     Column(Modifier.fillMaxSize().padding(32.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
         Text("Создать аккаунт", style = MaterialTheme.typography.headlineLarge)
         Spacer(Modifier.height(32.dp))
-        TextField(email, { email = it }, label = { Text("Email") }, modifier = Modifier.fillMaxWidth())
+        TextField(nickname, { nickname = it }, label = { Text("Никнейм") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
         Spacer(Modifier.height(8.dp))
-        TextField(password, { password = it }, label = { Text("Пароль") }, modifier = Modifier.fillMaxWidth())
+        TextField(email, { email = it }, label = { Text("Email") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+        Spacer(Modifier.height(8.dp))
+        TextField(password, { password = it }, label = { Text("Пароль") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
         Spacer(Modifier.height(24.dp))
-        Button(onClick = { Firebase.auth.createUserWithEmailAndPassword(email, password).addOnSuccessListener { navController.navigate("main") } }, modifier = Modifier.fillMaxWidth()) { Text("Зарегистрироваться") }
+        
+        if (isLoading) {
+            CircularProgressIndicator()
+        } else {
+            Button(
+                onClick = {
+                    if (email.isNotEmpty() && password.isNotEmpty() && nickname.isNotEmpty()) {
+                        isLoading = true
+                        Firebase.auth.createUserWithEmailAndPassword(email, password)
+                            .addOnSuccessListener { result ->
+                                val userId = result.user?.uid ?: ""
+                                val now = Timestamp.now()
+                                
+                                val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US)
+                                sdf.timeZone = TimeZone.getTimeZone("UTC")
+                                val deadlineStr = sdf.format(Date(System.currentTimeMillis() + 86400000))
+
+                                val userData = hashMapOf(
+                                    "email" to email,
+                                    "nickname" to nickname,
+                                    "displayName" to nickname,
+                                    "createdAt" to now,
+                                    "updatedAt" to now,
+                                    "proActivatedAt" to now,
+                                    "isPro" to false,
+                                    "emailVerified" to true,
+                                    "photo" to null,
+                                    "verificationDeadline" to deadlineStr
+                                )
+                                db.collection("users").document(userId).set(userData)
+                                    .addOnSuccessListener { 
+                                        isLoading = false
+                                        navController.navigate("main") { popUpTo("login") { inclusive = true } } 
+                                    }
+                                    .addOnFailureListener { 
+                                        isLoading = false
+                                        Toast.makeText(context, "Ошибка БД: ${it.message}", Toast.LENGTH_LONG).show()
+                                    }
+                            }
+                            .addOnFailureListener { 
+                                isLoading = false
+                                Toast.makeText(context, "Ошибка регистрации: ${it.message}", Toast.LENGTH_LONG).show() 
+                            }
+                    } else {
+                        Toast.makeText(context, "Заполните все поля", Toast.LENGTH_SHORT).show()
+                    }
+                }, 
+                modifier = Modifier.fillMaxWidth()
+            ) { Text("Зарегистрироваться") }
+        }
     }
 }
