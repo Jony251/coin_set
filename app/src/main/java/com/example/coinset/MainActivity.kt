@@ -1,10 +1,13 @@
 package com.example.coinset
 
+import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -31,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.*
+import coil.compose.AsyncImage
 import com.example.coinset.ui.theme.CoinSetTheme
 import com.google.firebase.FirebaseApp
 import com.google.firebase.Timestamp
@@ -38,6 +42,7 @@ import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
+import com.google.firebase.storage.ktx.storage
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -220,16 +225,38 @@ fun CoinListScreen(navController: NavController, rulerId: String, category: Stri
 @Composable
 fun CoinDetailScreen(navController: NavController, coinId: String) {
     val db = Firebase.firestore
+    val storage = Firebase.storage
     val userId = Firebase.auth.currentUser?.uid
     var coin by remember { mutableStateOf<Coin?>(null) }
     var userCoinData by remember { mutableStateOf<Map<String, Any>?>(null) }
     var isUserPro by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(true) }
+    var isUploading by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
     var noteText by remember { mutableStateOf("") }
     var selectedCondition by remember { mutableStateOf("UNC") }
+    var imageUrl by remember { mutableStateOf<String?>(null) }
     val conditions = listOf("UNC", "AU", "XF", "VF", "F", "VG", "G")
+
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+        uri?.let {
+            if (isUserPro && userId != null) {
+                isUploading = true
+                val fileName = "user_coins/${userId}_${coinId}_${System.currentTimeMillis()}.jpg"
+                val ref = storage.reference.child(fileName)
+                ref.putFile(it).addOnSuccessListener {
+                    ref.downloadUrl.addOnSuccessListener { downloadUri ->
+                        imageUrl = downloadUri.toString()
+                        isUploading = false
+                    }
+                }.addOnFailureListener {
+                    isUploading = false
+                    Toast.makeText(context, "Ошибка загрузки", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
 
     LaunchedEffect(coinId) {
         db.collection("coins").document(coinId).get().addOnSuccessListener { doc ->
@@ -246,6 +273,7 @@ fun CoinDetailScreen(navController: NavController, coinId: String) {
                                 userCoinData = foundData
                                 noteText = foundData["notes"] as? String ?: ""
                                 selectedCondition = foundData["condition"] as? String ?: "UNC"
+                                imageUrl = foundData["photoUrl"] as? String
                             } else {
                                 userCoinData = null
                             }
@@ -292,7 +320,21 @@ fun CoinDetailScreen(navController: NavController, coinId: String) {
                                         Icon(Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(18.dp))
                                     }
                                 }
-                                Spacer(Modifier.height(8.dp))
+                                Spacer(Modifier.height(16.dp))
+                                
+                                Box(Modifier.fillMaxWidth().height(200.dp).clip(MaterialTheme.shapes.medium).clickable(isUserPro) { launcher.launch("image/*") }, contentAlignment = Alignment.Center) {
+                                    if (isUploading) CircularProgressIndicator()
+                                    else if (imageUrl != null) {
+                                        AsyncImage(model = imageUrl, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                                    } else {
+                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                            Icon(Icons.Default.AddAPhoto, null, Modifier.size(48.dp))
+                                            Text("Нажмите, чтобы добавить фото")
+                                        }
+                                    }
+                                }
+                                
+                                Spacer(Modifier.height(16.dp))
                                 
                                 Text("Состояние:")
                                 ScrollableTabRow(
@@ -329,6 +371,7 @@ fun CoinDetailScreen(navController: NavController, coinId: String) {
                                                             it.toMutableMap().apply {
                                                                 put("notes", noteText)
                                                                 put("condition", selectedCondition)
+                                                                put("photoUrl", imageUrl ?: "")
                                                             }
                                                         } else it
                                                     }
@@ -371,7 +414,7 @@ fun CoinDetailScreen(navController: NavController, coinId: String) {
                     item {
                         Button(onClick = {
                             if (userId != null) {
-                                val coinData = mapOf("catalogCoinId" to coinId, "addedAt" to System.currentTimeMillis().toString(), "condition" to "UNC", "notes" to "")
+                                val coinData = mapOf("catalogCoinId" to coinId, "addedAt" to System.currentTimeMillis().toString(), "condition" to "UNC", "notes" to "", "photoUrl" to "")
                                 db.collection("collections").document(userId).update("coins", FieldValue.arrayUnion(coinData))
                                     .addOnSuccessListener { userCoinData = coinData; Toast.makeText(context, "Добавлено", Toast.LENGTH_SHORT).show() }
                                     .addOnFailureListener {
@@ -422,20 +465,54 @@ fun MyCollectionScreen(navController: NavController) {
 
     Scaffold(topBar = { TopAppBar(title = { Text("Моя коллекция") }) }) { padding ->
         if (isLoading) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-        else if (coinsWithDetails.isEmpty()) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Коллекция пуста") }
-        else LazyColumn(modifier = Modifier.padding(padding)) {
-            items(coinsWithDetails) { (coin, userData) ->
-                Card(modifier = Modifier.fillMaxWidth().padding(8.dp).clickable { navController.navigate("coin_detail/${coin.id}") }) {
-                    Column(modifier = Modifier.padding(16.dp)) {
+        else {
+            val totalCoins = coinsWithDetails.size
+            val totalPriceMin = coinsWithDetails.sumOf { it.first.estimatedValueMin }
+            val totalPriceMax = coinsWithDetails.sumOf { it.first.estimatedValueMax }
+
+            Column(Modifier.padding(padding).fillMaxSize()) {
+                Card(modifier = Modifier.fillMaxWidth().padding(8.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
+                    Column(Modifier.padding(16.dp)) {
+                        Text("Статистика коллекции", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                        Spacer(Modifier.height(8.dp))
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text(coin.name, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                            Surface(color = MaterialTheme.colorScheme.primary, shape = MaterialTheme.shapes.small) {
-                                Text(userData["condition"] as? String ?: "UNC", modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp), color = Color.White, fontSize = 12.sp)
-                            }
+                            Text("Всего монет:")
+                            Text("$totalCoins шт.", fontWeight = FontWeight.Bold)
                         }
-                        val note = userData["notes"] as? String ?: ""
-                        if (note.isNotEmpty()) {
-                            Text("Заметка: $note", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("Общая оценка:")
+                            Text("$totalPriceMin - $totalPriceMax руб.", fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+
+                if (coinsWithDetails.isEmpty()) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Коллекция пуста") }
+                } else {
+                    LazyColumn(Modifier.weight(1f)) {
+                        items(coinsWithDetails) { (coin, userData) ->
+                            Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp).clickable { navController.navigate("coin_detail/${coin.id}") }) {
+                                Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    val userPhoto = userData["photoUrl"] as? String
+                                    if (!userPhoto.isNullOrEmpty()) {
+                                        AsyncImage(model = userPhoto, contentDescription = null, modifier = Modifier.size(60.dp).clip(MaterialTheme.shapes.small), contentScale = ContentScale.Crop)
+                                        Spacer(Modifier.width(12.dp))
+                                    }
+                                    Column(Modifier.weight(1f)) {
+                                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                            Text(coin.name, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                            Surface(color = MaterialTheme.colorScheme.primary, shape = MaterialTheme.shapes.small) {
+                                                Text(userData["condition"] as? String ?: "UNC", modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp), color = Color.White, fontSize = 12.sp)
+                                            }
+                                        }
+                                        val note = userData["notes"] as? String ?: ""
+                                        if (note.isNotEmpty()) {
+                                            Text("Заметка: $note", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                        }
+                                        Text("${coin.estimatedValueMin} - ${coin.estimatedValueMax} руб.", style = MaterialTheme.typography.labelSmall)
+                                    }
+                                }
+                            }
                         }
                     }
                 }
