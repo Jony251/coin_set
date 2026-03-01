@@ -18,6 +18,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -222,6 +223,7 @@ fun CoinDetailScreen(navController: NavController, coinId: String) {
     val userId = Firebase.auth.currentUser?.uid
     var coin by remember { mutableStateOf<Coin?>(null) }
     var userCoinData by remember { mutableStateOf<Map<String, Any>?>(null) }
+    var isUserPro by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(true) }
     val context = LocalContext.current
 
@@ -233,19 +235,23 @@ fun CoinDetailScreen(navController: NavController, coinId: String) {
         db.collection("coins").document(coinId).get().addOnSuccessListener { doc ->
             coin = doc.toObject(Coin::class.java)?.copy(id = doc.id)
             if (userId != null) {
-                db.collection("collections").document(userId).get().addOnSuccessListener { collDoc ->
-                    if (collDoc.exists()) {
-                        val coinsList = collDoc.get("coins") as? List<Map<String, Any>>
-                        val foundData = coinsList?.find { it["catalogCoinId"] == coinId }
-                        if (foundData != null) {
-                            userCoinData = foundData
-                            noteText = foundData["notes"] as? String ?: ""
-                            selectedCondition = foundData["condition"] as? String ?: "UNC"
-                        } else {
-                            userCoinData = null
+                db.collection("users").document(userId).get().addOnSuccessListener { userDoc ->
+                    isUserPro = userDoc.getBoolean("isPro") ?: false
+                    
+                    db.collection("collections").document(userId).get().addOnSuccessListener { collDoc ->
+                        if (collDoc.exists()) {
+                            val coinsList = collDoc.get("coins") as? List<Map<String, Any>>
+                            val foundData = coinsList?.find { it["catalogCoinId"] == coinId }
+                            if (foundData != null) {
+                                userCoinData = foundData
+                                noteText = foundData["notes"] as? String ?: ""
+                                selectedCondition = foundData["condition"] as? String ?: "UNC"
+                            } else {
+                                userCoinData = null
+                            }
                         }
-                    }
-                    isLoading = false
+                        isLoading = false
+                    }.addOnFailureListener { isLoading = false }
                 }.addOnFailureListener { isLoading = false }
             } else isLoading = false
         }.addOnFailureListener { isLoading = false }
@@ -272,9 +278,20 @@ fun CoinDetailScreen(navController: NavController, coinId: String) {
 
                 if (userCoinData != null) {
                     item {
-                        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f))) {
-                            Column(Modifier.padding(16.dp)) {
-                                Text("Ваша монета:", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)),
+                            modifier = Modifier.clickable(!isUserPro) {
+                                Toast.makeText(context, "Для расширения возможностей оплатите взнос", Toast.LENGTH_SHORT).show()
+                            }
+                        ) {
+                            Column(Modifier.padding(16.dp).alpha(if (isUserPro) 1f else 0.5f)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text("Ваша монета:", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                                    if (!isUserPro) {
+                                        Spacer(Modifier.width(8.dp))
+                                        Icon(Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    }
+                                }
                                 Spacer(Modifier.height(8.dp))
                                 
                                 Text("Состояние:")
@@ -284,7 +301,7 @@ fun CoinDetailScreen(navController: NavController, coinId: String) {
                                     containerColor = Color.Transparent
                                 ) {
                                     conditions.forEach { cond ->
-                                        Tab(selected = selectedCondition == cond, onClick = { selectedCondition = cond }, text = { Text(cond) })
+                                        Tab(selected = selectedCondition == cond, onClick = { if (isUserPro) selectedCondition = cond }, text = { Text(cond) }, enabled = isUserPro)
                                     }
                                 }
                                 
@@ -292,33 +309,38 @@ fun CoinDetailScreen(navController: NavController, coinId: String) {
                                 
                                 OutlinedTextField(
                                     value = noteText,
-                                    onValueChange = { noteText = it },
+                                    onValueChange = { if (isUserPro) noteText = it },
                                     label = { Text("Заметки юзера") },
                                     modifier = Modifier.fillMaxWidth(),
-                                    minLines = 2
+                                    minLines = 2,
+                                    enabled = isUserPro
                                 )
                                 
                                 Spacer(Modifier.height(16.dp))
                                 
                                 Button(
                                     onClick = {
-                                        if (userId != null) {
-                                            db.collection("collections").document(userId).get().addOnSuccessListener { doc ->
-                                                val coinsList = doc.get("coins") as? List<Map<String, Any>> ?: emptyList()
-                                                val updatedList = coinsList.map {
-                                                    if (it["catalogCoinId"] == coinId) {
-                                                        it.toMutableMap().apply {
-                                                            put("notes", noteText)
-                                                            put("condition", selectedCondition)
-                                                        }
-                                                    } else it
-                                                }
-                                                db.collection("collections").document(userId).update("coins", updatedList)
-                                                    .addOnSuccessListener { 
-                                                        userCoinData = updatedList.find { it["catalogCoinId"] == coinId }
-                                                        Toast.makeText(context, "Сохранено", Toast.LENGTH_SHORT).show() 
+                                        if (isUserPro) {
+                                            if (userId != null) {
+                                                db.collection("collections").document(userId).get().addOnSuccessListener { doc ->
+                                                    val coinsList = doc.get("coins") as? List<Map<String, Any>> ?: emptyList()
+                                                    val updatedList = coinsList.map {
+                                                        if (it["catalogCoinId"] == coinId) {
+                                                            it.toMutableMap().apply {
+                                                                put("notes", noteText)
+                                                                put("condition", selectedCondition)
+                                                            }
+                                                        } else it
                                                     }
+                                                    db.collection("collections").document(userId).update("coins", updatedList)
+                                                        .addOnSuccessListener { 
+                                                            userCoinData = updatedList.find { it["catalogCoinId"] == coinId }
+                                                            Toast.makeText(context, "Сохранено", Toast.LENGTH_SHORT).show() 
+                                                        }
+                                                }
                                             }
+                                        } else {
+                                            Toast.makeText(context, "Для расширения возможностей оплатите взнос", Toast.LENGTH_SHORT).show()
                                         }
                                     },
                                     modifier = Modifier.fillMaxWidth()
