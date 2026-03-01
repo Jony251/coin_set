@@ -47,5 +47,6 @@ data class UserCoin(
     val count: Int = 1,
     val condition: String = "UNC",
     val purchasePrice: Double = 0.0,
-    val sellingPrice: Double = 0.0
+    val sellingPrice: Double = 0.0,
+    val notes: String = ""
 )

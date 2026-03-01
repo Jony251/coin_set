@@ -5,10 +5,12 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
@@ -16,8 +18,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -107,7 +114,16 @@ fun CountryListScreen(navController: NavController) {
         }.addOnFailureListener { isLoading = false }
     }
 
-    Scaffold(topBar = { TopAppBar(title = { Text("Страны") }) }) { padding ->
+    Scaffold(topBar = { 
+        TopAppBar(
+            title = { 
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Image(painter = painterResource(id = R.drawable.icon), contentDescription = null, modifier = Modifier.size(32.dp).padding(end = 8.dp))
+                    Text("Каталог") 
+                }
+            }
+        ) 
+    }) { padding ->
         if (isLoading) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
         else LazyColumn(modifier = Modifier.padding(padding)) {
             items(countries) { country ->
@@ -185,8 +201,8 @@ fun CoinListScreen(navController: NavController, rulerId: String, category: Stri
                 Card(modifier = Modifier.fillMaxWidth().padding(8.dp).clickable { navController.navigate("coin_detail/${coin.id}") }) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(coin.name, style = MaterialTheme.typography.titleMedium)
-                        Text("Металл: ${coin.metal}")
-                        Text("Год: ${coin.year}")
+                        Text("Металл: ${coin.metal}", style = MaterialTheme.typography.bodySmall)
+                        Text("Год: ${coin.year}", style = MaterialTheme.typography.bodySmall)
                     }
                 }
             }
@@ -200,9 +216,13 @@ fun CoinDetailScreen(navController: NavController, coinId: String) {
     val db = Firebase.firestore
     val userId = Firebase.auth.currentUser?.uid
     var coin by remember { mutableStateOf<Coin?>(null) }
-    var isInCollection by remember { mutableStateOf(false) }
+    var userCoinData by remember { mutableStateOf<Map<String, Any>?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     val context = LocalContext.current
+
+    var noteText by remember { mutableStateOf("") }
+    var selectedCondition by remember { mutableStateOf("UNC") }
+    val conditions = listOf("UNC", "AU", "XF", "VF", "F", "VG", "G")
 
     LaunchedEffect(coinId) {
         db.collection("coins").document(coinId).get().addOnSuccessListener { doc ->
@@ -211,7 +231,14 @@ fun CoinDetailScreen(navController: NavController, coinId: String) {
                 db.collection("collections").document(userId).get().addOnSuccessListener { collDoc ->
                     if (collDoc.exists()) {
                         val coinsList = collDoc.get("coins") as? List<Map<String, Any>>
-                        isInCollection = coinsList?.any { it["catalogCoinId"] == coinId } == true
+                        val foundData = coinsList?.find { it["catalogCoinId"] == coinId }
+                        if (foundData != null) {
+                            userCoinData = foundData
+                            noteText = foundData["notes"] as? String ?: ""
+                            selectedCondition = foundData["condition"] as? String ?: "UNC"
+                        } else {
+                            userCoinData = null
+                        }
                     }
                     isLoading = false
                 }.addOnFailureListener { isLoading = false }
@@ -222,39 +249,111 @@ fun CoinDetailScreen(navController: NavController, coinId: String) {
     Scaffold(topBar = { TopAppBar(title = { Text(coin?.name ?: "Детали") }, navigationIcon = { IconButton(onClick = { navController.popBackStack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) } }) }) { padding ->
         if (isLoading) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
         else if (coin != null) {
-            Column(modifier = Modifier.padding(padding).padding(16.dp).fillMaxSize()) {
-                Text("Характеристики:", fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                InfoRow("Номинал", coin!!.denomination)
-                InfoRow("Металл", coin!!.metal)
-                InfoRow("Год", coin!!.year.toString())
-                InfoRow("Вес", "${coin!!.weight} г")
-                InfoRow("Примерная цена", "${coin!!.estimatedValueMin} - ${coin!!.estimatedValueMax} руб.")
-                Spacer(Modifier.weight(1f))
-                if (!isInCollection) {
-                    Button(onClick = {
-                        if (userId != null) {
-                            val coinData = mapOf("catalogCoinId" to coinId, "addedAt" to System.currentTimeMillis().toString(), "condition" to "fair")
-                            db.collection("collections").document(userId).update("coins", FieldValue.arrayUnion(coinData))
-                                .addOnSuccessListener { isInCollection = true; Toast.makeText(context, "Добавлено", Toast.LENGTH_SHORT).show() }
-                                .addOnFailureListener { // Если документа нет, создаем его
-                                    db.collection("collections").document(userId).set(mapOf("coins" to listOf(coinData)))
-                                        .addOnSuccessListener { isInCollection = true }
+            LazyColumn(modifier = Modifier.padding(padding).padding(16.dp).fillMaxSize()) {
+                item {
+                    Text("Характеристики:", fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                    Spacer(Modifier.height(8.dp))
+                    InfoRow("Номинал", coin!!.denomination)
+                    InfoRow("Металл", coin!!.metal)
+                    InfoRow("Год", coin!!.year.toString())
+                    if (coin!!.weight > 0) InfoRow("Вес", "${coin!!.weight} г")
+                    if (coin!!.diameter > 0) InfoRow("Диаметр", "${coin!!.diameter} мм")
+                    if (coin!!.mint.isNotEmpty()) InfoRow("Монетный двор", coin!!.mint)
+                    if (coin!!.rarity.isNotEmpty()) InfoRow("Редкость", coin!!.rarity)
+                    InfoRow("Примерная цена", "${coin!!.estimatedValueMin} - ${coin!!.estimatedValueMax} руб.")
+                    
+                    Spacer(Modifier.height(24.dp))
+                }
+
+                if (userCoinData != null) {
+                    item {
+                        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f))) {
+                            Column(Modifier.padding(16.dp)) {
+                                Text("Ваша монета:", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                                Spacer(Modifier.height(8.dp))
+                                
+                                Text("Состояние:")
+                                ScrollableTabRow(
+                                    selectedTabIndex = conditions.indexOf(selectedCondition).coerceAtLeast(0),
+                                    edgePadding = 0.dp,
+                                    containerColor = Color.Transparent
+                                ) {
+                                    conditions.forEach { cond ->
+                                        Tab(selected = selectedCondition == cond, onClick = { selectedCondition = cond }, text = { Text(cond) })
+                                    }
                                 }
-                        }
-                    }, modifier = Modifier.fillMaxWidth()) { Text("Добавить в коллекцию") }
-                } else {
-                    Button(onClick = {
-                        if (userId != null) {
-                            db.collection("collections").document(userId).get().addOnSuccessListener { doc ->
-                                val coinsList = doc.get("coins") as? List<Map<String, Any>>
-                                val itemToRemove = coinsList?.find { it["catalogCoinId"] == coinId }
-                                if (itemToRemove != null) {
-                                    db.collection("collections").document(userId).update("coins", FieldValue.arrayRemove(itemToRemove))
-                                        .addOnSuccessListener { isInCollection = false; Toast.makeText(context, "Удалено", Toast.LENGTH_SHORT).show() }
-                                }
+                                
+                                Spacer(Modifier.height(16.dp))
+                                
+                                OutlinedTextField(
+                                    value = noteText,
+                                    onValueChange = { noteText = it },
+                                    label = { Text("Заметки юзера") },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    minLines = 2
+                                )
+                                
+                                Spacer(Modifier.height(16.dp))
+                                
+                                Button(
+                                    onClick = {
+                                        if (userId != null) {
+                                            db.collection("collections").document(userId).get().addOnSuccessListener { doc ->
+                                                val coinsList = doc.get("coins") as? List<Map<String, Any>> ?: emptyList()
+                                                val updatedList = coinsList.map {
+                                                    if (it["catalogCoinId"] == coinId) {
+                                                        it.toMutableMap().apply {
+                                                            put("notes", noteText)
+                                                            put("condition", selectedCondition)
+                                                        }
+                                                    } else it
+                                                }
+                                                db.collection("collections").document(userId).update("coins", updatedList)
+                                                    .addOnSuccessListener { 
+                                                        userCoinData = updatedList.find { it["catalogCoinId"] == coinId }
+                                                        Toast.makeText(context, "Сохранено", Toast.LENGTH_SHORT).show() 
+                                                    }
+                                            }
+                                        }
+                                    },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) { Text("Сохранить изменения") }
                             }
                         }
-                    }, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error), modifier = Modifier.fillMaxWidth()) { Text("Удалить из коллекции") }
+                        
+                        Spacer(Modifier.height(8.dp))
+                        
+                        TextButton(
+                            onClick = {
+                                if (userId != null) {
+                                    db.collection("collections").document(userId).get().addOnSuccessListener { doc ->
+                                        val coinsList = doc.get("coins") as? List<Map<String, Any>>
+                                        val itemToRemove = coinsList?.find { it["catalogCoinId"] == coinId }
+                                        if (itemToRemove != null) {
+                                            db.collection("collections").document(userId).update("coins", FieldValue.arrayRemove(itemToRemove))
+                                                .addOnSuccessListener { userCoinData = null; Toast.makeText(context, "Удалено", Toast.LENGTH_SHORT).show() }
+                                        }
+                                    }
+                                }
+                            },
+                            colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text("Удалить из коллекции") }
+                    }
+                } else {
+                    item {
+                        Button(onClick = {
+                            if (userId != null) {
+                                val coinData = mapOf("catalogCoinId" to coinId, "addedAt" to System.currentTimeMillis().toString(), "condition" to "UNC", "notes" to "")
+                                db.collection("collections").document(userId).update("coins", FieldValue.arrayUnion(coinData))
+                                    .addOnSuccessListener { userCoinData = coinData; Toast.makeText(context, "Добавлено", Toast.LENGTH_SHORT).show() }
+                                    .addOnFailureListener {
+                                        db.collection("collections").document(userId).set(mapOf("coins" to listOf(coinData)))
+                                            .addOnSuccessListener { userCoinData = coinData }
+                                    }
+                            }
+                        }, modifier = Modifier.fillMaxWidth()) { Text("Добавить в коллекцию") }
+                    }
                 }
             }
         }
@@ -266,36 +365,51 @@ fun CoinDetailScreen(navController: NavController, coinId: String) {
 fun MyCollectionScreen(navController: NavController) {
     val db = Firebase.firestore
     val userId = Firebase.auth.currentUser?.uid
-    val coins = remember { mutableStateListOf<Coin>() }
+    val coinsWithDetails = remember { mutableStateListOf<Pair<Coin, Map<String, Any>>>() }
     var isLoading by remember { mutableStateOf(true) }
 
     LaunchedEffect(Unit) {
         if (userId != null) {
             db.collection("collections").document(userId).get().addOnSuccessListener { doc ->
                 if (doc.exists()) {
-                    val coinsList = doc.get("coins") as? List<Map<String, Any>>
-                    val coinIds = coinsList?.mapNotNull { it["catalogCoinId"] as? String } ?: emptyList()
+                    val userCoinsList = doc.get("coins") as? List<Map<String, Any>> ?: emptyList()
+                    val coinIds = userCoinsList.mapNotNull { it["catalogCoinId"] as? String }
                     if (coinIds.isNotEmpty()) {
                         db.collection("coins").whereIn("id", coinIds).get().addOnSuccessListener { coinResult ->
-                            coins.clear()
-                            for (cDoc in coinResult) coins.add(cDoc.toObject(Coin::class.java).copy(id = cDoc.id))
+                            coinsWithDetails.clear()
+                            val catalogCoins = coinResult.documents.associateBy({ it.id }, { it.toObject(Coin::class.java)!! })
+                            
+                            userCoinsList.forEach { userCoinMap ->
+                                val cid = userCoinMap["catalogCoinId"] as String
+                                catalogCoins[cid]?.let { detail ->
+                                    coinsWithDetails.add(detail to userCoinMap)
+                                }
+                            }
                             isLoading = false
                         }
-                    } else isLoading = false
-                } else isLoading = false
+                    } else { coinsWithDetails.clear(); isLoading = false }
+                } else { coinsWithDetails.clear(); isLoading = false }
             }.addOnFailureListener { isLoading = false }
         }
     }
 
     Scaffold(topBar = { TopAppBar(title = { Text("Моя коллекция") }) }) { padding ->
         if (isLoading) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-        else if (coins.isEmpty()) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Коллекция пуста") }
+        else if (coinsWithDetails.isEmpty()) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Коллекция пуста") }
         else LazyColumn(modifier = Modifier.padding(padding)) {
-            items(coins) { coin ->
+            items(coinsWithDetails) { (coin, userData) ->
                 Card(modifier = Modifier.fillMaxWidth().padding(8.dp).clickable { navController.navigate("coin_detail/${coin.id}") }) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text(coin.name, style = MaterialTheme.typography.titleMedium)
-                        Text("Металл: ${coin.metal}")
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text(coin.name, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                            Surface(color = MaterialTheme.colorScheme.primary, shape = MaterialTheme.shapes.small) {
+                                Text(userData["condition"] as? String ?: "UNC", modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp), color = Color.White, fontSize = 12.sp)
+                            }
+                        }
+                        val note = userData["notes"] as? String ?: ""
+                        if (note.isNotEmpty()) {
+                            Text("Заметка: $note", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
                     }
                 }
             }
@@ -315,9 +429,17 @@ fun InfoRow(label: String, value: String) {
 fun SettingsScreen(navController: NavController) {
     val user = Firebase.auth.currentUser
     Column(Modifier.fillMaxSize().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Icon(Icons.Default.AccountCircle, null, Modifier.size(100.dp))
-        Text("Email: ${user?.email}")
-        Button(onClick = { Firebase.auth.signOut(); navController.navigate("login") { popUpTo(0) } }) { Text("Выйти") }
+        Image(
+            painter = painterResource(id = R.drawable.icon),
+            contentDescription = null,
+            modifier = Modifier.size(120.dp).clip(CircleShape),
+            contentScale = ContentScale.Fit
+        )
+        Spacer(Modifier.height(16.dp))
+        Text("Ваш профиль", style = MaterialTheme.typography.headlineMedium)
+        Text("Email: ${user?.email}", color = MaterialTheme.colorScheme.secondary)
+        Spacer(Modifier.height(32.dp))
+        Button(onClick = { Firebase.auth.signOut(); navController.navigate("login") { popUpTo(0) } }, modifier = Modifier.fillMaxWidth()) { Text("Выйти из аккаунта") }
     }
 }
 
@@ -325,10 +447,15 @@ fun SettingsScreen(navController: NavController) {
 fun LoginScreen(navController: NavController) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-    Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.Center) {
-        Text("Вход", style = MaterialTheme.typography.headlineLarge)
+    Column(Modifier.fillMaxSize().padding(32.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+        Image(painter = painterResource(id = R.drawable.icon), contentDescription = null, modifier = Modifier.size(100.dp))
+        Spacer(Modifier.height(24.dp))
+        Text("Coin Set", style = MaterialTheme.typography.headlineLarge)
+        Spacer(Modifier.height(32.dp))
         TextField(email, { email = it }, label = { Text("Email") }, modifier = Modifier.fillMaxWidth())
+        Spacer(Modifier.height(8.dp))
         TextField(password, { password = it }, label = { Text("Пароль") }, modifier = Modifier.fillMaxWidth())
+        Spacer(Modifier.height(24.dp))
         Button(onClick = { Firebase.auth.signInWithEmailAndPassword(email, password).addOnSuccessListener { navController.navigate("main") } }, modifier = Modifier.fillMaxWidth()) { Text("Войти") }
         TextButton(onClick = { navController.navigate("register") }) { Text("Регистрация") }
     }
@@ -338,10 +465,13 @@ fun LoginScreen(navController: NavController) {
 fun RegisterScreen(navController: NavController) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-    Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.Center) {
-        Text("Регистрация", style = MaterialTheme.typography.headlineLarge)
+    Column(Modifier.fillMaxSize().padding(32.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+        Text("Создать аккаунт", style = MaterialTheme.typography.headlineLarge)
+        Spacer(Modifier.height(32.dp))
         TextField(email, { email = it }, label = { Text("Email") }, modifier = Modifier.fillMaxWidth())
+        Spacer(Modifier.height(8.dp))
         TextField(password, { password = it }, label = { Text("Пароль") }, modifier = Modifier.fillMaxWidth())
-        Button(onClick = { Firebase.auth.createUserWithEmailAndPassword(email, password).addOnSuccessListener { navController.navigate("main") } }, modifier = Modifier.fillMaxWidth()) { Text("Создать") }
+        Spacer(Modifier.height(24.dp))
+        Button(onClick = { Firebase.auth.createUserWithEmailAndPassword(email, password).addOnSuccessListener { navController.navigate("main") } }, modifier = Modifier.fillMaxWidth()) { Text("Зарегистрироваться") }
     }
 }
