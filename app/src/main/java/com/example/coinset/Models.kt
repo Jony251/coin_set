@@ -38,7 +38,8 @@ data class Coin(
     val rulerId: String = "",
     val category: String = "",
     val year: Int = 0,
-    val weight: Double = 0.0
+    val weight: Double = 0.0,
+    val description: String = "" // Добавлено для исторической справки
 )
 
 data class UserCoin(
@@ -48,5 +49,6 @@ data class UserCoin(
     val condition: String = "UNC",
     val purchasePrice: Double = 0.0,
     val sellingPrice: Double = 0.0,
-    val notes: String = ""
+    val notes: String = "",
+    val photoUrl: String = ""
 )

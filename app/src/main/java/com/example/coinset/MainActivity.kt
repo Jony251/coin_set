@@ -81,6 +81,14 @@ fun MainApp() {
         composable("coins/{rulerId}/{category}") { backStackEntry ->
             CoinListScreen(navController, backStackEntry.arguments?.getString("rulerId") ?: "", backStackEntry.arguments?.getString("category") ?: "")
         }
+        composable("coin_type/{rulerId}/{category}/{denomination}") { backStackEntry ->
+            CoinTypeScreen(
+                navController, 
+                backStackEntry.arguments?.getString("rulerId") ?: "", 
+                backStackEntry.arguments?.getString("category") ?: "",
+                backStackEntry.arguments?.getString("denomination") ?: ""
+            )
+        }
         composable("coin_detail/{coinId}") { backStackEntry ->
             CoinDetailScreen(navController, backStackEntry.arguments?.getString("coinId") ?: "")
         }
@@ -191,16 +199,20 @@ fun CategoryListScreen(navController: NavController, rulerId: String, rulerName:
 @Composable
 fun CoinListScreen(navController: NavController, rulerId: String, category: String) {
     val db = Firebase.firestore
-    val coins = remember { mutableStateListOf<Coin>() }
+    val denominations = remember { mutableStateListOf<String>() }
     var isLoading by remember { mutableStateOf(true) }
 
     LaunchedEffect(rulerId, category) {
         db.collection("coins").whereEqualTo("rulerId", rulerId).get().addOnSuccessListener { result ->
-            coins.clear()
+            val set = mutableSetOf<String>()
             for (doc in result) {
-                val coin = doc.toObject(Coin::class.java).copy(id = doc.id)
-                if (category == "Пробные" || coin.metal.contains(category, ignoreCase = true)) coins.add(coin)
+                val coin = doc.toObject(Coin::class.java)
+                if (category == "Пробные" || coin.metal.contains(category, ignoreCase = true)) {
+                    set.add(coin.denomination)
+                }
             }
+            denominations.clear()
+            denominations.addAll(set.sortedByDescending { it }) // Сортировка номиналов
             isLoading = false
         }.addOnFailureListener { isLoading = false }
     }
@@ -208,13 +220,82 @@ fun CoinListScreen(navController: NavController, rulerId: String, category: Stri
     Scaffold(topBar = { TopAppBar(title = { Text(category) }, navigationIcon = { IconButton(onClick = { navController.popBackStack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) } }) }) { padding ->
         if (isLoading) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
         else LazyColumn(modifier = Modifier.padding(padding)) {
-            items(coins) { coin ->
-                Card(modifier = Modifier.fillMaxWidth().padding(8.dp).clickable { navController.navigate("coin_detail/${coin.id}") }) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(coin.name, style = MaterialTheme.typography.titleMedium)
-                        Text("Металл: ${coin.metal}", style = MaterialTheme.typography.bodySmall)
-                        Text("Год: ${coin.year}", style = MaterialTheme.typography.bodySmall)
+            items(denominations) { den ->
+                ListItem(
+                    headlineContent = { Text(den) },
+                    trailingContent = { Icon(Icons.Default.KeyboardArrowRight, null) },
+                    modifier = Modifier.clickable { navController.navigate("coin_type/$rulerId/$category/$den") }
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CoinTypeScreen(navController: NavController, rulerId: String, category: String, denomination: String) {
+    val db = Firebase.firestore
+    val coins = remember { mutableStateListOf<Coin>() }
+    var isLoading by remember { mutableStateOf(true) }
+    val context = LocalContext.current
+    val userId = Firebase.auth.currentUser?.uid
+
+    LaunchedEffect(Unit) {
+        db.collection("coins")
+            .whereEqualTo("rulerId", rulerId)
+            .whereEqualTo("denomination", denomination)
+            .get().addOnSuccessListener { result ->
+                coins.clear()
+                for (doc in result) {
+                    val coin = doc.toObject(Coin::class.java).copy(id = doc.id)
+                    if (category == "Пробные" || coin.metal.contains(category, ignoreCase = true)) {
+                        coins.add(coin)
                     }
+                }
+                coins.sortBy { it.year }
+                isLoading = false
+            }.addOnFailureListener { isLoading = false }
+    }
+
+    Scaffold(topBar = { TopAppBar(title = { Text(denomination) }, navigationIcon = { IconButton(onClick = { navController.popBackStack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) } }) }) { padding ->
+        if (isLoading) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+        else Column(Modifier.padding(padding)) {
+            if (coins.isNotEmpty()) {
+                val firstCoin = coins[0]
+                Card(Modifier.fillMaxWidth().padding(8.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+                    Column(Modifier.padding(16.dp)) {
+                        Text("Характеристики типа", fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.height(4.dp))
+                        Text("Металл: ${firstCoin.metal}")
+                        Text("Вес: ${firstCoin.weight} г, Диаметр: ${firstCoin.diameter} мм")
+                        if (firstCoin.description.isNotEmpty()) {
+                            Spacer(Modifier.height(8.dp))
+                            Text(firstCoin.description, style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                }
+            }
+
+            LazyColumn(Modifier.weight(1f)) {
+                items(coins) { coin ->
+                    ListItem(
+                        headlineContent = { Text("${coin.year} ${coin.mint}") },
+                        supportingContent = { Text("Редкость: ${if(coin.rarity.isEmpty()) "обычная" else coin.rarity}") },
+                        trailingContent = {
+                            IconButton(onClick = {
+                                if (userId != null) {
+                                    val coinData = mapOf("catalogCoinId" to coin.id, "addedAt" to System.currentTimeMillis().toString(), "condition" to "UNC", "notes" to "", "photoUrl" to "")
+                                    db.collection("collections").document(userId).update("coins", FieldValue.arrayUnion(coinData))
+                                        .addOnSuccessListener { Toast.makeText(context, "Добавлено в коллекцию", Toast.LENGTH_SHORT).show() }
+                                        .addOnFailureListener {
+                                            db.collection("collections").document(userId).set(mapOf("coins" to listOf(coinData)))
+                                                .addOnSuccessListener { Toast.makeText(context, "Добавлено в коллекцию", Toast.LENGTH_SHORT).show() }
+                                        }
+                                }
+                            }) { Icon(Icons.Default.AddCircle, "Быстрое добавление", tint = MaterialTheme.colorScheme.primary) }
+                        },
+                        modifier = Modifier.clickable { navController.navigate("coin_detail/${coin.id}") }
+                    )
                 }
             }
         }
@@ -328,7 +409,7 @@ fun CoinDetailScreen(navController: NavController, coinId: String) {
                                         AsyncImage(model = imageUrl, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                                     } else {
                                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                            Icon(Icons.Default.AddAPhoto, null, Modifier.size(48.dp))
+                                            Icon(Icons.Default.Add, null, Modifier.size(48.dp))
                                             Text("Нажмите, чтобы добавить фото")
                                         }
                                     }
