@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -33,6 +34,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.*
 import coil.compose.AsyncImage
 import com.example.coinset.ui.theme.CoinSetTheme
@@ -71,28 +73,6 @@ fun MainApp() {
         composable("login") { LoginScreen(navController) }
         composable("register") { RegisterScreen(navController) }
         composable("main") { MainScreen(navController) }
-        
-        composable("rulers/{countryId}/{countryName}") { backStackEntry ->
-            RulerListScreen(navController, backStackEntry.arguments?.getString("countryId") ?: "", backStackEntry.arguments?.getString("countryName") ?: "")
-        }
-        composable("categories/{rulerId}/{rulerName}") { backStackEntry ->
-            CategoryListScreen(navController, backStackEntry.arguments?.getString("rulerId") ?: "", backStackEntry.arguments?.getString("rulerName") ?: "")
-        }
-        composable("coins/{rulerId}/{category}") { backStackEntry ->
-            CoinListScreen(navController, backStackEntry.arguments?.getString("rulerId") ?: "", backStackEntry.arguments?.getString("category") ?: "")
-        }
-        composable("coin_type/{rulerId}/{category}/{denomination}") { backStackEntry ->
-            CoinTypeScreen(
-                navController, 
-                backStackEntry.arguments?.getString("rulerId") ?: "", 
-                backStackEntry.arguments?.getString("category") ?: "",
-                backStackEntry.arguments?.getString("denomination") ?: ""
-            )
-        }
-        composable("coin_detail/{coinId}") { backStackEntry ->
-            CoinDetailScreen(navController, backStackEntry.arguments?.getString("coinId") ?: "")
-        }
-        composable("premium") { PremiumScreen(navController) }
     }
 }
 
@@ -104,16 +84,80 @@ fun MainScreen(parentNavController: NavController) {
             NavigationBar {
                 val navBackStackEntry by bottomNavController.currentBackStackEntryAsState()
                 val currentRoute = navBackStackEntry?.destination?.route
-                NavigationBarItem(icon = { Icon(Icons.Default.Search, null) }, label = { Text("Каталог") }, selected = currentRoute == "catalog_root", onClick = { bottomNavController.navigate("catalog_root") })
-                NavigationBarItem(icon = { Icon(Icons.Default.Favorite, null) }, label = { Text("Моя") }, selected = currentRoute == "my_collection", onClick = { bottomNavController.navigate("my_collection") })
-                NavigationBarItem(icon = { Icon(Icons.Default.Settings, null) }, label = { Text("Настройки") }, selected = currentRoute == "settings", onClick = { bottomNavController.navigate("settings") })
+                
+                // Каталог и все его вложенные экраны
+                val isCatalogSelected = currentRoute == "catalog_root" || 
+                    currentRoute?.startsWith("rulers") == true || 
+                    currentRoute?.startsWith("categories") == true || 
+                    currentRoute?.startsWith("coins") == true || 
+                    currentRoute?.startsWith("coin_type") == true || 
+                    currentRoute?.startsWith("coin_detail") == true
+
+                NavigationBarItem(
+                    icon = { Icon(Icons.Default.Search, null) }, 
+                    label = { Text("Каталог") }, 
+                    selected = isCatalogSelected, 
+                    onClick = { 
+                        bottomNavController.navigate("catalog_root") { 
+                            popUpTo(bottomNavController.graph.findStartDestination().id) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true 
+                        } 
+                    }
+                )
+                NavigationBarItem(
+                    icon = { Icon(Icons.Default.Favorite, null) }, 
+                    label = { Text("Коллекция") }, 
+                    selected = currentRoute == "my_collection", 
+                    onClick = { 
+                        bottomNavController.navigate("my_collection") { 
+                            popUpTo(bottomNavController.graph.findStartDestination().id) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true 
+                        } 
+                    }
+                )
+                NavigationBarItem(
+                    icon = { Icon(Icons.Default.Settings, null) }, 
+                    label = { Text("Настройки") }, 
+                    selected = currentRoute == "settings" || currentRoute == "premium", 
+                    onClick = { 
+                        bottomNavController.navigate("settings") { 
+                            popUpTo(bottomNavController.graph.findStartDestination().id) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true 
+                        } 
+                    }
+                )
             }
         }
     ) { innerPadding ->
         NavHost(navController = bottomNavController, startDestination = "my_collection", modifier = Modifier.padding(innerPadding)) {
-            composable("catalog_root") { CountryListScreen(parentNavController) }
-            composable("my_collection") { MyCollectionScreen(parentNavController) }
-            composable("settings") { SettingsScreen(parentNavController) }
+            composable("catalog_root") { CountryListScreen(bottomNavController) }
+            composable("my_collection") { MyCollectionScreen(bottomNavController) }
+            composable("settings") { SettingsScreen(bottomNavController, parentNavController) }
+            
+            composable("rulers/{countryId}/{countryName}") { backStackEntry ->
+                RulerListScreen(bottomNavController, backStackEntry.arguments?.getString("countryId") ?: "", backStackEntry.arguments?.getString("countryName") ?: "")
+            }
+            composable("categories/{rulerId}/{rulerName}") { backStackEntry ->
+                CategoryListScreen(bottomNavController, backStackEntry.arguments?.getString("rulerId") ?: "", backStackEntry.arguments?.getString("rulerName") ?: "")
+            }
+            composable("coins/{rulerId}/{category}") { backStackEntry ->
+                CoinListScreen(bottomNavController, backStackEntry.arguments?.getString("rulerId") ?: "", backStackEntry.arguments?.getString("category") ?: "")
+            }
+            composable("coin_type/{rulerId}/{category}/{denomination}") { backStackEntry ->
+                CoinTypeScreen(
+                    bottomNavController, 
+                    backStackEntry.arguments?.getString("rulerId") ?: "", 
+                    backStackEntry.arguments?.getString("category") ?: "",
+                    backStackEntry.arguments?.getString("denomination") ?: ""
+                )
+            }
+            composable("coin_detail/{coinId}") { backStackEntry ->
+                CoinDetailScreen(bottomNavController, backStackEntry.arguments?.getString("coinId") ?: "")
+            }
+            composable("premium") { PremiumScreen(bottomNavController) }
         }
     }
 }
@@ -212,7 +256,7 @@ fun CoinListScreen(navController: NavController, rulerId: String, category: Stri
                 }
             }
             denominations.clear()
-            denominations.addAll(set.sortedByDescending { it }) // Сортировка номиналов
+            denominations.addAll(set.sortedByDescending { it })
             isLoading = false
         }.addOnFailureListener { isLoading = false }
     }
@@ -223,7 +267,7 @@ fun CoinListScreen(navController: NavController, rulerId: String, category: Stri
             items(denominations) { den ->
                 ListItem(
                     headlineContent = { Text(den) },
-                    trailingContent = { Icon(Icons.Default.KeyboardArrowRight, null) },
+                    trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) },
                     modifier = Modifier.clickable { navController.navigate("coin_type/$rulerId/$category/$den") }
                 )
             }
@@ -544,7 +588,7 @@ fun MyCollectionScreen(navController: NavController) {
         }
     }
 
-    Scaffold(topBar = { TopAppBar(title = { Text("Моя коллекция") }) }) { padding ->
+    Scaffold(topBar = { TopAppBar(title = { Text("Коллекция") }) }) { padding ->
         if (isLoading) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
         else {
             val totalCoins = coinsWithDetails.size
@@ -611,7 +655,7 @@ fun InfoRow(label: String, value: String) {
 }
 
 @Composable
-fun SettingsScreen(navController: NavController) {
+fun SettingsScreen(navController: NavController, rootNavController: NavController) {
     val db = Firebase.firestore
     val userId = Firebase.auth.currentUser?.uid
     var isPro by remember { mutableStateOf(false) }
@@ -619,8 +663,8 @@ fun SettingsScreen(navController: NavController) {
 
     LaunchedEffect(userId) {
         if (userId != null) {
-            db.collection("users").document(userId).get().addOnSuccessListener { doc ->
-                isPro = doc.getBoolean("isPro") ?: false
+            db.collection("users").document(userId).get().addOnSuccessListener { userDoc ->
+                isPro = userDoc.getBoolean("isPro") ?: false
                 isLoading = false
             }.addOnFailureListener { isLoading = false }
         }
@@ -654,7 +698,7 @@ fun SettingsScreen(navController: NavController) {
         }
 
         Spacer(Modifier.height(32.dp))
-        Button(onClick = { Firebase.auth.signOut(); navController.navigate("login") { popUpTo(0) { inclusive = true } } }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.errorContainer, contentColor = MaterialTheme.colorScheme.onErrorContainer)) { Text("Выйти из аккаунта") }
+        Button(onClick = { Firebase.auth.signOut(); rootNavController.navigate("login") { popUpTo(0) { inclusive = true } } }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.errorContainer, contentColor = MaterialTheme.colorScheme.onErrorContainer)) { Text("Выйти из аккаунта") }
     }
 }
 
@@ -692,8 +736,6 @@ fun PremiumScreen(navController: NavController) {
                     onClick = {
                         if (userId != null) {
                             isProcessing = true
-                            // ВАЖНО: Текущие правила Firestore запрещают клиенту менять isPro.
-                            // Для теста нужно временно разрешить update или использовать Backend.
                             db.collection("users").document(userId).update(
                                 "isPro", true,
                                 "proActivatedAt", Timestamp.now(),
