@@ -40,7 +40,7 @@ import com.google.firebase.ktx.Firebase
 import com.google.firebase.storage.ktx.storage
 
 /**
- * Screen displaying countries with a search bar and "not found" handling.
+ * Screen displaying countries with advanced search and "find_arr" logging.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -82,7 +82,7 @@ fun CountryListScreen(navController: NavController) {
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
                 modifier = Modifier.fillMaxWidth().padding(16.dp),
-                placeholder = { Text("Search country...") },
+                placeholder = { Text("Search country (Italy, Russia...)...") },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 singleLine = true,
                 shape = MaterialTheme.shapes.medium
@@ -97,23 +97,25 @@ fun CountryListScreen(navController: NavController) {
                     verticalArrangement = Arrangement.Center
                 ) {
                     Text(
-                        text = "Country \"$searchQuery\" will appear in the near future!",
+                        text = "Country \"$searchQuery\" not found. It will be added soon!",
                         style = MaterialTheme.typography.bodyLarge,
                         textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(bottom = 16.dp),
                         color = MaterialTheme.colorScheme.secondary
                     )
+                    Spacer(Modifier.height(16.dp))
                     Button(onClick = {
                         val trimmed = searchQuery.trim()
-                        db.collection("find_arr").document("find_arr")
-                            .set(mapOf("find" to FieldValue.arrayUnion(trimmed)), SetOptions.merge())
-                            .addOnSuccessListener {
-                                Toast.makeText(context, "Request for '$trimmed' saved!", Toast.LENGTH_SHORT).show()
-                                searchQuery = ""
-                            }
-                            .addOnFailureListener { e ->
-                                Toast.makeText(context, "Error: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
-                            }
+                        if (trimmed.isNotEmpty()) {
+                            db.collection("find_arr").document("find_arr")
+                                .set(mapOf("find" to FieldValue.arrayUnion(trimmed)), SetOptions.merge())
+                                .addOnSuccessListener {
+                                    Toast.makeText(context, "Saved to wishlist: $trimmed", Toast.LENGTH_SHORT).show()
+                                    searchQuery = ""
+                                }
+                                .addOnFailureListener { e ->
+                                    Toast.makeText(context, "Error: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                                }
+                        }
                     }) {
                         Text("Notify me when added")
                     }
@@ -137,7 +139,7 @@ fun CountryListScreen(navController: NavController) {
 }
 
 /**
- * Modern screen displaying rulers using the Period-based hierarchy.
+ * Modern Ruler List Screen with dynamic collection support (rulers_countryId).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -147,23 +149,27 @@ fun RulerListScreen(navController: NavController, countryId: String, countryName
     var isLoading by remember { mutableStateOf(true) }
 
     LaunchedEffect(countryId) {
-        // Updated schema: countries -> periods (by countryId) -> rulers (by periodId)
-        db.collection("periods").whereEqualTo("countryId", countryId).get().addOnSuccessListener { periodResult ->
-            val periodIds = periodResult.documents.map { it.id }.toMutableList()
-            
-            val defaultPeriodId = "${countryId}_period"
-            if (!periodIds.contains(defaultPeriodId)) periodIds.add(defaultPeriodId)
-
-            // Dynamic collection name support might be needed if rulers are split by country
-            // For now, assuming a central 'rulers' or specific logic per your schema description
-            db.collection("rulers").whereIn("periodId", periodIds).get().addOnSuccessListener { rResult ->
+        // First try country-specific collection (e.g. rulers_russian_empire)
+        db.collection("rulers_$countryId").get().addOnSuccessListener { result ->
+            if (!result.isEmpty) {
                 rulers.clear()
-                for (doc in rResult) rulers.add(doc.toObject(Ruler::class.java).copy(id = doc.id))
+                for (doc in result) rulers.add(doc.toObject(Ruler::class.java).copy(id = doc.id))
                 rulers.sortBy { it.startYear }
                 isLoading = false
-            }.addOnFailureListener { 
-                // Handle rulers_russian_empire style specific collections if needed
-                isLoading = false 
+            } else {
+                // Fallback to Periods -> Rulers schema
+                db.collection("periods").whereEqualTo("countryId", countryId).get().addOnSuccessListener { periodResult ->
+                    val periodIds = periodResult.documents.map { it.id }.toMutableList()
+                    val defaultPeriodId = "${countryId}_period"
+                    if (!periodIds.contains(defaultPeriodId)) periodIds.add(defaultPeriodId)
+
+                    db.collection("rulers").whereIn("periodId", periodIds).get().addOnSuccessListener { rResult ->
+                        rulers.clear()
+                        for (doc in rResult) rulers.add(doc.toObject(Ruler::class.java).copy(id = doc.id))
+                        rulers.sortBy { it.startYear }
+                        isLoading = false
+                    }.addOnFailureListener { isLoading = false }
+                }.addOnFailureListener { isLoading = false }
             }
         }.addOnFailureListener { isLoading = false }
     }
@@ -247,25 +253,24 @@ fun CoinListScreen(navController: NavController, rulerId: String, category: Stri
     var isLoading by remember { mutableStateOf(true) }
 
     LaunchedEffect(rulerId, category) {
+        // Query main 'coins' collection (Russian Empire etc.)
         db.collection("coins").whereEqualTo("rulerId", rulerId).get().addOnSuccessListener { result ->
             val set = mutableSetOf<String>()
             for (doc in result) {
                 val coin = doc.toObject(Coin::class.java)
                 
-                // Flexible matching for both Russian and English metal names
-                val c = category.lowercase()
-                val m = coin.composition.lowercase() // Updated to composition field
-                val catInDoc = coin.category.lowercase()
+                // Flexible matching for both category and composition
+                val cat = category.lowercase()
+                val m = coin.composition.lowercase()
+                val coinCat = coin.category.lowercase()
                 
-                val metalMatches = m.contains(c) || catInDoc.contains(c) ||
-                                   (c == "серебро" && m.contains("silver")) ||
-                                   (c == "золото" && m.contains("gold")) ||
-                                   (c == "медь" && (m.contains("copper") || m.contains("bronze")))
+                val matches = m.contains(cat) || coinCat.contains(cat) ||
+                              (cat == "серебро" && m.contains("silver")) ||
+                              (cat == "золото" && m.contains("gold")) ||
+                              (cat == "медь" && (m.contains("copper") || m.contains("bronze")))
                 
-                val isPattern = category == "Пробные" || category == "Patterns"
-                
-                if (isPattern || metalMatches) {
-                    set.add(coin.denominationName.ifEmpty { coin.name }) // Updated to denominationName
+                if (cat == "пробные" || matches) {
+                    set.add(coin.denominationName.ifEmpty { coin.name })
                 }
             }
             denominations.clear()
@@ -281,7 +286,7 @@ fun CoinListScreen(navController: NavController, rulerId: String, category: Stri
         ) 
     }) { padding ->
         if (isLoading) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-        else if (denominations.isEmpty()) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("No coins found") }
+        else if (denominations.isEmpty()) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("No denominations found") }
         else LazyColumn(modifier = Modifier.padding(padding)) {
             items(denominations) { den ->
                 ListItem(
@@ -309,17 +314,17 @@ fun CoinTypeScreen(navController: NavController, rulerId: String, category: Stri
             for (doc in result) {
                 val coin = doc.toObject(Coin::class.java).copy(id = doc.id)
                 val currentDenom = coin.denominationName.ifEmpty { coin.name }
+                
                 if (currentDenom == denomination) {
-                    val c = category.lowercase()
+                    val cat = category.lowercase()
                     val m = coin.composition.lowercase()
-                    val catInDoc = coin.category.lowercase()
+                    val coinCat = coin.category.lowercase()
+                    val matches = m.contains(cat) || coinCat.contains(cat) ||
+                                  (cat == "серебро" && m.contains("silver")) ||
+                                  (cat == "золото" && m.contains("gold")) ||
+                                  (cat == "медь" && (m.contains("copper") || m.contains("bronze")))
                     
-                    val metalMatches = m.contains(c) || catInDoc.contains(c) ||
-                                       (c == "серебро" && m.contains("silver")) ||
-                                       (c == "золото" && m.contains("gold")) ||
-                                       (c == "медь" && (m.contains("copper") || m.contains("bronze")))
-                    
-                    if (category == "Пробные" || metalMatches) coins.add(coin)
+                    if (cat == "пробные" || matches) coins.add(coin)
                 }
             }
             coins.sortBy { it.year }
@@ -343,7 +348,7 @@ fun CoinTypeScreen(navController: NavController, rulerId: String, category: Stri
                         Text("Composition: ${first.composition}")
                         Text("Weight: ${first.weight}g | Diameter: ${first.diameter}mm")
                         if (first.catalogs.rarity.isNotEmpty()) {
-                            Text("Rarity Index: ${first.catalogs.rarity}")
+                            Text("Rarity (Scale): ${first.catalogs.rarity}", color = MaterialTheme.colorScheme.primary)
                         }
                     }
                 }
@@ -354,7 +359,7 @@ fun CoinTypeScreen(navController: NavController, rulerId: String, category: Stri
                         headlineContent = { Text("${coin.year} ${coin.mint}") },
                         supportingContent = { 
                             val rarity = coin.catalogs.rarity.ifEmpty { "Common" }
-                            Text("Rarity: $rarity") 
+                            Text("Catalog Rarity: $rarity") 
                         },
                         trailingContent = {
                             IconButton(onClick = {
@@ -387,7 +392,6 @@ fun CoinDetailScreen(navController: NavController, coinId: String) {
     val context = LocalContext.current
 
     var noteText by remember { mutableStateOf("") }
-    var selectedCondition by remember { mutableStateOf("UNC") }
     var imageUrl by remember { mutableStateOf<String?>(null) }
 
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
@@ -419,7 +423,6 @@ fun CoinDetailScreen(navController: NavController, coinId: String) {
                             if (data != null) {
                                 userCoinData = data
                                 noteText = data["notes"] as? String ?: ""
-                                selectedCondition = data["condition"] as? String ?: "UNC"
                                 imageUrl = data["photoUrl"] as? String
                             }
                         }
@@ -443,6 +446,7 @@ fun CoinDetailScreen(navController: NavController, coinId: String) {
                     
                     if (coin!!.catalogs.bitkin.isNotEmpty()) InfoRow("Bitkin #", coin!!.catalogs.bitkin)
                     if (coin!!.catalogs.petrov.isNotEmpty()) InfoRow("Petrov #", coin!!.catalogs.petrov)
+                    if (coin!!.catalogs.rarity.isNotEmpty()) InfoRow("Catalog Rarity", coin!!.catalogs.rarity)
 
                     Spacer(Modifier.height(24.dp))
                 }
