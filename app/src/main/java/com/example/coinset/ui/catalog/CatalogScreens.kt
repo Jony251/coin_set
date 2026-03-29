@@ -39,6 +39,12 @@ import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.storage.ktx.storage
 
+data class Country(
+    @get:PropertyName("country_name") @set:PropertyName("country_name")
+    var name: String = ""
+    // ...
+)
+
 /**
  * Screen displaying countries with advanced search and "find_arr" logging.
  */
