@@ -31,6 +31,9 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.coinset.*
+import com.example.coinset.api.CatalogRepository
+import com.example.coinset.api.CountryResponse
+import com.example.coinset.api.RulerResponse
 import com.example.coinset.ui.components.InfoRow
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.FieldValue
@@ -39,34 +42,29 @@ import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.storage.ktx.storage
 
-data class Country(
-    @get:PropertyName("country_name") @set:PropertyName("country_name")
-    var name: String = ""
-    // ...
-)
-
 /**
  * Screen displaying countries with advanced search and "find_arr" logging.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CountryListScreen(navController: NavController) {
-    val db = Firebase.firestore
-    val countries = remember { mutableStateListOf<Country>() }
+    val repository = remember { CatalogRepository() }
+    val countries = remember { mutableStateListOf<CountryResponse>() }
     var isLoading by remember { mutableStateOf(true) }
     var searchQuery by remember { mutableStateOf("") }
     val context = LocalContext.current
+    val db = Firebase.firestore // Still used for "find_arr" wishlist for now
 
     LaunchedEffect(Unit) {
-        db.collection("countries").get().addOnSuccessListener { result ->
+        repository.getCountries().onSuccess { result ->
             countries.clear()
-            for (doc in result) countries.add(doc.toObject(Country::class.java).copy(id = doc.id))
+            countries.addAll(result)
             isLoading = false
-        }.addOnFailureListener { isLoading = false }
+        }.onFailure { isLoading = false }
     }
 
     val filteredCountries = countries.filter {
-        it.name.contains(searchQuery, ignoreCase = true) || it.id.contains(searchQuery, ignoreCase = true)
+        it.name.contains(searchQuery, ignoreCase = true)
     }
 
     Scaffold(topBar = { 
@@ -131,7 +129,7 @@ fun CountryListScreen(navController: NavController) {
                     items(filteredCountries) { country ->
                         ListItem(
                             headlineContent = { Text(country.name, fontWeight = FontWeight.Medium) }, 
-                            supportingContent = { Text(country.id) },
+                            supportingContent = { Text(country.code) },
                             leadingContent = { Text("🚩", fontSize = 24.sp) }, 
                             modifier = Modifier.clickable { 
                                 navController.navigate("rulers/${country.id}/${country.name}") 
@@ -150,34 +148,21 @@ fun CountryListScreen(navController: NavController) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RulerListScreen(navController: NavController, countryId: String, countryName: String) {
-    val db = Firebase.firestore
-    val rulers = remember { mutableStateListOf<Ruler>() }
+    val repository = remember { CatalogRepository() }
+    val rulers = remember { mutableStateListOf<RulerResponse>() }
     var isLoading by remember { mutableStateOf(true) }
 
     LaunchedEffect(countryId) {
-        // First try country-specific collection (e.g. rulers_russian_empire)
-        db.collection("rulers_$countryId").get().addOnSuccessListener { result ->
-            if (!result.isEmpty) {
+        val id = countryId.toIntOrNull()
+        if (id != null) {
+            repository.getCountryWithRulers(id).onSuccess { result ->
                 rulers.clear()
-                for (doc in result) rulers.add(doc.toObject(Ruler::class.java).copy(id = doc.id))
-                rulers.sortBy { it.startYear }
+                rulers.addAll(result.rulers)
                 isLoading = false
-            } else {
-                // Fallback to Periods -> Rulers schema
-                db.collection("periods").whereEqualTo("countryId", countryId).get().addOnSuccessListener { periodResult ->
-                    val periodIds = periodResult.documents.map { it.id }.toMutableList()
-                    val defaultPeriodId = "${countryId}_period"
-                    if (!periodIds.contains(defaultPeriodId)) periodIds.add(defaultPeriodId)
-
-                    db.collection("rulers").whereIn("periodId", periodIds).get().addOnSuccessListener { rResult ->
-                        rulers.clear()
-                        for (doc in rResult) rulers.add(doc.toObject(Ruler::class.java).copy(id = doc.id))
-                        rulers.sortBy { it.startYear }
-                        isLoading = false
-                    }.addOnFailureListener { isLoading = false }
-                }.addOnFailureListener { isLoading = false }
-            }
-        }.addOnFailureListener { isLoading = false }
+            }.onFailure { isLoading = false }
+        } else {
+            isLoading = false
+        }
     }
 
     Scaffold(
@@ -202,22 +187,13 @@ fun RulerListScreen(navController: NavController, countryId: String, countryName
                             .clickable { navController.navigate("categories/${ruler.id}/${ruler.name}") }
                     ) {
                         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                            if (!ruler.imageUrl.isNullOrEmpty()) {
-                                AsyncImage(
-                                    model = ruler.imageUrl,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(60.dp).clip(CircleShape),
-                                    contentScale = ContentScale.Crop
-                                )
-                            } else {
-                                Surface(Modifier.size(60.dp), shape = CircleShape, color = MaterialTheme.colorScheme.surfaceVariant) {
-                                    Icon(Icons.Default.Person, null, Modifier.padding(12.dp))
-                                }
+                            Surface(Modifier.size(60.dp), shape = CircleShape, color = MaterialTheme.colorScheme.surfaceVariant) {
+                                Icon(Icons.Default.Person, null, Modifier.padding(12.dp))
                             }
                             Spacer(Modifier.width(16.dp))
                             Column {
                                 Text(ruler.name, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-                                if (ruler.startYear > 0) Text("${ruler.startYear} - ${ruler.endYear}", color = MaterialTheme.colorScheme.secondary)
+                                if (ruler.periodStart > 0) Text("${ruler.periodStart} - ${ruler.periodEnd}", color = MaterialTheme.colorScheme.secondary)
                             }
                         }
                     }

@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.NavController
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.*
+import com.example.coinset.api.TokenManager
 import com.example.coinset.ui.auth.LoginScreen
 import com.example.coinset.ui.auth.RegisterScreen
 import com.example.coinset.ui.catalog.*
@@ -35,6 +36,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
+        TokenManager.init(this)
+
         // Initialize Firebase SDK
         try { 
             FirebaseApp.initializeApp(this) 
