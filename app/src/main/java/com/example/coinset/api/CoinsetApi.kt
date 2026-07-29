@@ -113,7 +113,7 @@ interface CoinsetApi {
     suspend fun uploadCoinImage(
         @Path("id") id: Int,
         @Part file: MultipartBody.Part
-    ): ImageUploadResponse
+    ): UserCoinResponse
     
     @GET("api/user-coins/stats/summary")
     suspend fun getCollectionStats(): CollectionStats
@@ -123,5 +123,5 @@ interface CoinsetApi {
     suspend fun getVipStatus(): VipStatus
     
     @POST("api/vip/activate")
-    suspend fun activateVip(@Body request: VipActivateRequest): VipActivateResponse
+    suspend fun activateVip(@Body request: VipActivateRequest): VipStatus
 }

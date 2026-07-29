@@ -29,11 +29,7 @@ data class UserResponse(
     val username: String,
     val email: String,
     @SerializedName("is_active") val isActive: Boolean,
-    @SerializedName("is_admin") val isAdmin: Boolean,
-    @SerializedName("is_vip") val isVip: Boolean,
-    @SerializedName("vip_activated_at") val vipActivatedAt: String?,
-    @SerializedName("vip_expires_at") val vipExpiresAt: String?,
-    @SerializedName("created_at") val createdAt: String
+    @SerializedName("is_admin") val isAdmin: Boolean
 )
 
 // Catalog Models
@@ -94,7 +90,7 @@ data class CoinResponse(
     val name: String,
     @SerializedName("ruler_id") val rulerId: Int,
     @SerializedName("metal_type") val metalType: String,
-    val denomination: String,
+    val denomination: String?,
     val year: Int?,
     val weight: Double?,
     val diameter: Double?,
@@ -118,11 +114,15 @@ data class UserCoinResponse(
     @SerializedName("selling_price") val sellingPrice: Double?,
     @SerializedName("current_weight") val currentWeight: Double?,
     val notes: String?,
-    val images: String?,  // JSON string
+    val images: List<String> = emptyList(),
     @SerializedName("custom_fields") val customFields: Map<String, Any>?,
     @SerializedName("created_at") val createdAt: String,
     @SerializedName("updated_at") val updatedAt: String,
-    val coin: CoinResponse?
+    @SerializedName("coin_name") val coinName: String?,
+    @SerializedName("coin_year") val coinYear: Int?,
+    @SerializedName("coin_metal_type") val coinMetalType: String?,
+    @SerializedName("ruler_name") val rulerName: String?,
+    @SerializedName("country_name") val countryName: String?
 )
 
 data class UserCoinCreate(
@@ -146,9 +146,10 @@ data class UserCoinUpdate(
 
 data class CollectionStats(
     @SerializedName("total_coins") val totalCoins: Int,
-    @SerializedName("total_value") val totalValue: Double,
-    @SerializedName("by_metal") val byMetal: Map<String, Int>,
-    @SerializedName("by_condition") val byCondition: Map<String, Int>
+    @SerializedName("total_purchase_value") val totalPurchaseValue: Double,
+    @SerializedName("total_selling_value") val totalSellingValue: Double,
+    @SerializedName("coins_by_condition") val coinsByCondition: Map<String, Int>,
+    @SerializedName("coins_by_metal") val coinsByMetal: Map<String, Int>
 )
 
 // VIP Models
@@ -156,19 +157,10 @@ data class VipStatus(
     @SerializedName("is_vip") val isVip: Boolean,
     @SerializedName("vip_activated_at") val vipActivatedAt: String?,
     @SerializedName("vip_expires_at") val vipExpiresAt: String?,
-    @SerializedName("days_remaining") val daysRemaining: Int?,
-    @SerializedName("is_active") val isActive: Boolean
+    @SerializedName("days_remaining") val daysRemaining: Int?
 )
 
 data class VipActivateRequest(
-    @SerializedName("payment_id") val paymentId: String
+    @SerializedName("payment_token") val paymentToken: String? = null
 )
 
-data class VipActivateResponse(
-    val message: String,
-    @SerializedName("expires_at") val expiresAt: String
-)
-
-data class ImageUploadResponse(
-    @SerializedName("image_url") val imageUrl: String
-)
