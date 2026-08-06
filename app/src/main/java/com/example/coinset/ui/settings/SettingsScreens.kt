@@ -21,30 +21,32 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.coinset.R
+import com.example.coinset.api.AuthRepository
+import com.example.coinset.api.TokenManager
+import com.example.coinset.api.UserResponse
 import com.example.coinset.ui.components.BulletItem
-import com.google.firebase.Timestamp
-import com.google.firebase.auth.ktx.auth
-import com.google.firebase.firestore.ktx.firestore
-import com.google.firebase.ktx.Firebase
+import kotlinx.coroutines.launch
 
 /**
  * Screen for user settings and account status.
  */
 @Composable
 fun SettingsScreen(navController: NavController, rootNavController: NavController) {
-    val db = Firebase.firestore
-    val userId = Firebase.auth.currentUser?.uid
-    var isPro by remember { mutableStateOf(false) }
+    val authRepository = remember { AuthRepository() }
+    var user by remember { mutableStateOf<UserResponse?>(null) }
     var isLoading by remember { mutableStateOf(true) }
+    val scope = rememberCoroutineScope()
 
-    LaunchedEffect(userId) {
-        if (userId != null) {
-            db.collection("users").document(userId).get().addOnSuccessListener { userDoc ->
-                isPro = userDoc.getBoolean("isPro") ?: false
-                isLoading = false
-            }.addOnFailureListener { isLoading = false }
+    LaunchedEffect(Unit) {
+        authRepository.getCurrentUser().onSuccess { result ->
+            user = result
+            isLoading = false
+        }.onFailure { 
+            isLoading = false 
         }
     }
+
+    val isPro = user?.isAdmin ?: false
 
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp), 
@@ -60,7 +62,7 @@ fun SettingsScreen(navController: NavController, rootNavController: NavControlle
         Spacer(Modifier.height(16.dp))
         Text(text = "Your Profile", style = MaterialTheme.typography.headlineMedium)
         Text(
-            text = "Email: ${Firebase.auth.currentUser?.email}", 
+            text = "Email: ${user?.email ?: "Loading..."}", 
             color = MaterialTheme.colorScheme.secondary
         )
         
@@ -88,7 +90,7 @@ fun SettingsScreen(navController: NavController, rootNavController: NavControlle
                 }
                 
                 Spacer(Modifier.height(16.dp))
-                Divider()
+                HorizontalDivider()
                 Spacer(Modifier.height(16.dp))
                 
                 // Feature List
@@ -106,10 +108,12 @@ fun SettingsScreen(navController: NavController, rootNavController: NavControlle
         // Sign Out Button
         Button(
             onClick = { 
-                Firebase.auth.signOut()
-                rootNavController.navigate("login") { 
-                    popUpTo(0) { inclusive = true } 
-                } 
+                scope.launch {
+                    TokenManager.clearTokens()
+                    rootNavController.navigate("login") { 
+                        popUpTo(0) { inclusive = true } 
+                    } 
+                }
             }, 
             modifier = Modifier.fillMaxWidth(), 
             colors = ButtonDefaults.buttonColors(
@@ -128,10 +132,9 @@ fun SettingsScreen(navController: NavController, rootNavController: NavControlle
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PremiumScreen(navController: NavController) {
-    val db = Firebase.firestore
-    val userId = Firebase.auth.currentUser?.uid
     val context = LocalContext.current
     var isProcessing by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     Scaffold(
         topBar = { 
@@ -180,19 +183,13 @@ fun PremiumScreen(navController: NavController) {
             } else {
                 Button(
                     onClick = {
-                        if (userId != null) {
-                            isProcessing = true
-                            db.collection("users").document(userId).update(
-                                "isPro", true,
-                                "proActivatedAt", Timestamp.now(),
-                                "updatedAt", Timestamp.now()
-                            ).addOnSuccessListener {
-                                Toast.makeText(context, "Success! PRO Activated.", Toast.LENGTH_LONG).show()
-                                navController.popBackStack()
-                            }.addOnFailureListener { e ->
-                                isProcessing = false
-                                Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_LONG).show()
-                            }
+                        isProcessing = true
+                        scope.launch {
+                            // Simulation: Wait for 2 seconds and succeed
+                            kotlinx.coroutines.delay(2000)
+                            isProcessing = false
+                            Toast.makeText(context, "Success! PRO Activated (Simulated).", Toast.LENGTH_LONG).show()
+                            navController.popBackStack()
                         }
                     },
                     modifier = Modifier.fillMaxWidth().height(56.dp)

@@ -30,11 +30,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
-import com.example.coinset.*
-import com.example.coinset.api.CatalogRepository
-import com.example.coinset.api.CountryResponse
-import com.example.coinset.api.RulerResponse
+import com.example.coinset.R
+import com.example.coinset.api.*
 import com.example.coinset.ui.components.InfoRow
+import kotlinx.coroutines.launch
 
 /**
  * Screen displaying countries with advanced search.
@@ -64,7 +63,7 @@ fun CountryListScreen(navController: NavController) {
             title = { 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Image(
-                        painter = painterResource(id = com.example.coinset.R.drawable.icon), 
+                        painter = painterResource(id = R.drawable.icon), 
                         contentDescription = null, 
                         modifier = Modifier.size(32.dp).padding(end = 8.dp)
                     )
@@ -265,7 +264,7 @@ fun CoinListScreen(navController: NavController, rulerId: String, category: Stri
 fun CoinTypeScreen(navController: NavController, rulerId: String, category: String, denomination: String) {
     val repository = remember { CatalogRepository() }
     val collectionRepo = remember { CollectionRepository() }
-    val coins = remember { mutableStateListOf<com.example.coinset.api.CoinResponse>() }
+    val coins = remember { mutableStateListOf<CoinResponse>() }
     var isLoading by remember { mutableStateOf(true) }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -276,11 +275,11 @@ fun CoinTypeScreen(navController: NavController, rulerId: String, category: Stri
             repository.getCoins(rulerId = rId).onSuccess { result ->
                 coins.clear()
                 for (coin in result) {
-                    val currentDenom = coin.denomination ?: coin.name
+                    val currentDenomination = coin.denomination ?: coin.name
                     
-                    if (currentDenom == denomination) {
+                    if (currentDenomination == denomination) {
                         val cat = category.lowercase()
-                        val m = (coin.metalType ?: "").lowercase()
+                        val m = coin.metalType.lowercase()
                         val coinCat = (coin.description ?: "").lowercase()
                         val matches = m.contains(cat) || coinCat.contains(cat) ||
                                       (cat == "серебро" && m.contains("silver")) ||
@@ -313,7 +312,7 @@ fun CoinTypeScreen(navController: NavController, rulerId: String, category: Stri
                         Text("Specifications", fontWeight = FontWeight.Bold)
                         Text("Composition: ${first.metalType}")
                         Text("Weight: ${first.weight}g | Diameter: ${first.diameter}mm")
-                        if (!first.rarity.isNullOrEmpty()) {
+                        if (first.rarity.isNotEmpty()) {
                             Text("Rarity (Scale): ${first.rarity}", color = MaterialTheme.colorScheme.primary)
                         }
                     }
@@ -324,19 +323,18 @@ fun CoinTypeScreen(navController: NavController, rulerId: String, category: Stri
                     ListItem(
                         headlineContent = { Text("${coin.year ?: ""} ${coin.description ?: ""}") },
                         supportingContent = { 
-                            val rarity = if (coin.rarity.isNullOrEmpty()) "Common" else coin.rarity
-                            Text("Catalog Rarity: $rarity") 
+                            Text("Catalog Rarity: ${coin.rarity.ifEmpty { "Common" }}") 
                         },
                         trailingContent = {
-                            IconButton(onClick = {
-                                scope.launch {
-                                    collectionRepo.addCoinToCollection(coin.id, "UNC").onSuccess {
-                                        Toast.makeText(context, "Added!", Toast.LENGTH_SHORT).show()
-                                    }.onFailure {
-                                        Toast.makeText(context, "Error: ${it.message}", Toast.LENGTH_SHORT).show()
-                                    }
-                                }
-                            }) { Icon(Icons.Default.AddCircle, null, tint = MaterialTheme.colorScheme.primary) }
+                    IconButton(onClick = {
+                        scope.launch {
+                            collectionRepo.addCoinToCollection(coin.id, "UNC").onSuccess { _: UserCoinResponse ->
+                                Toast.makeText(context, "Added!", Toast.LENGTH_SHORT).show()
+                            }.onFailure { e: Throwable ->
+                                Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    }) { Icon(Icons.Default.AddCircle, null, tint = MaterialTheme.colorScheme.primary) }
                         },
                         modifier = Modifier.clickable { navController.navigate("coin_detail/${coin.id}") }
                     )
@@ -353,12 +351,10 @@ fun CoinDetailScreen(navController: NavController, coinId: String) {
     val collectionRepo = remember { CollectionRepository() }
     val authRepository = remember { AuthRepository() }
     
-    var coin by remember { mutableStateOf<com.example.coinset.api.CoinResponse?>(null) }
-    var userCoinData by remember { mutableStateOf<com.example.coinset.api.UserCoinResponse?>(null) }
-    var isUserPro by remember { mutableStateOf(false) }
+    var coin by remember { mutableStateOf<CoinResponse?>(null) }
+    var userCoinData by remember { mutableStateOf<UserCoinResponse?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var isUploading by remember { mutableStateOf(false) }
-    val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
     var noteText by remember { mutableStateOf("") }
@@ -374,13 +370,11 @@ fun CoinDetailScreen(navController: NavController, coinId: String) {
     LaunchedEffect(coinId) {
         val id = coinId.toIntOrNull()
         if (id != null) {
-            repository.getCoin(id).onSuccess { coinResult ->
+            repository.getCoin(id).onSuccess { coinResult: CoinResponse ->
                 coin = coinResult
                 
-                authRepository.getCurrentUser().onSuccess { user ->
-                    isUserPro = user.isAdmin // Assuming admin for PRO for now or some other field
-                    
-                    collectionRepo.getUserCoins().onSuccess { userCoins ->
+                authRepository.getCurrentUser().onSuccess { _ ->
+                    collectionRepo.getUserCoins().onSuccess { userCoins: List<UserCoinResponse> ->
                         val data = userCoins.find { it.coinId == id }
                         if (data != null) {
                             userCoinData = data
@@ -407,7 +401,7 @@ fun CoinDetailScreen(navController: NavController, coinId: String) {
                     InfoRow("Year", coin!!.year?.toString() ?: "")
                     InfoRow("Rarity", coin!!.rarity)
                     
-                    if (!coin!!.description.isNullOrEmpty()) InfoRow("Description", coin!!.description!!)
+                    coin!!.description?.let { InfoRow("Description", it) }
 
                     Spacer(Modifier.height(24.dp))
                 }

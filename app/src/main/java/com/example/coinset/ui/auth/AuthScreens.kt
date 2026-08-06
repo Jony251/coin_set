@@ -1,3 +1,5 @@
+package com.example.coinset.ui.auth
+
 import android.util.Patterns
 import android.widget.Toast
 import androidx.compose.foundation.Image
