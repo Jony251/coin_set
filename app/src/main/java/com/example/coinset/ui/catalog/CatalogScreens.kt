@@ -400,7 +400,12 @@ fun CoinDetailScreen(navController: NavController, coinId: String) {
                     InfoRow("Metal", coin!!.metalType)
                     InfoRow("Year", coin!!.year?.toString() ?: "")
                     InfoRow("Rarity", coin!!.rarity)
-                    
+                    coin!!.series?.let { InfoRow("Series", it) }
+                    coin!!.rarityCode?.let { InfoRow("Rarity Code", it) }
+                    coin!!.mintageSpmd?.let { InfoRow("Mintage (SPMD)", it) }
+                    coin!!.mintageMmd?.let { InfoRow("Mintage (MMD)", it) }
+                    coin!!.priceEstimate?.let { InfoRow("Estimated Price", it) }
+
                     coin!!.description?.let { InfoRow("Description", it) }
 
                     Spacer(Modifier.height(24.dp))

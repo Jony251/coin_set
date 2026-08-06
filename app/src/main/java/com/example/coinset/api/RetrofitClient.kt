@@ -8,28 +8,31 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
 object RetrofitClient {
-    
-    private const val BASE_URL = "https://coinset.bluecat.cc/" 
-    
+
+    const val BASE_URL = "https://coinset.bluecat.cc/"
+
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY
     }
-    
+
     private val authInterceptor = Interceptor { chain ->
         val token = TokenManager.getAccessToken()
         val request = if (token != null) {
+            // .header (not addHeader) so a retried request from TokenAuthenticator
+            // ends up with a single, current Authorization header, not a duplicate.
             chain.request().newBuilder()
-                .addHeader("Authorization", "Bearer $token")
+                .header("Authorization", "Bearer $token")
                 .build()
         } else {
             chain.request()
         }
         chain.proceed(request)
     }
-    
+
     private val okHttpClient = OkHttpClient.Builder()
         .addInterceptor(loggingInterceptor)
         .addInterceptor(authInterceptor)
+        .authenticator(TokenAuthenticator)
         .connectTimeout(30, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)
         .writeTimeout(30, TimeUnit.SECONDS)
