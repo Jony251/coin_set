@@ -35,15 +35,9 @@ import com.example.coinset.api.CatalogRepository
 import com.example.coinset.api.CountryResponse
 import com.example.coinset.api.RulerResponse
 import com.example.coinset.ui.components.InfoRow
-import com.google.firebase.auth.ktx.auth
-import com.google.firebase.firestore.FieldValue
-import com.google.firebase.firestore.SetOptions
-import com.google.firebase.firestore.ktx.firestore
-import com.google.firebase.ktx.Firebase
-import com.google.firebase.storage.ktx.storage
 
 /**
- * Screen displaying countries with advanced search and "find_arr" logging.
+ * Screen displaying countries with advanced search.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -52,8 +46,6 @@ fun CountryListScreen(navController: NavController) {
     val countries = remember { mutableStateListOf<CountryResponse>() }
     var isLoading by remember { mutableStateOf(true) }
     var searchQuery by remember { mutableStateOf("") }
-    val context = LocalContext.current
-    val db = Firebase.firestore // Still used for "find_arr" wishlist for now
 
     LaunchedEffect(Unit) {
         repository.getCountries().onSuccess { result ->
@@ -106,23 +98,6 @@ fun CountryListScreen(navController: NavController) {
                         textAlign = TextAlign.Center,
                         color = MaterialTheme.colorScheme.secondary
                     )
-                    Spacer(Modifier.height(16.dp))
-                    Button(onClick = {
-                        val trimmed = searchQuery.trim()
-                        if (trimmed.isNotEmpty()) {
-                            db.collection("find_arr").document("find_arr")
-                                .set(mapOf("find" to FieldValue.arrayUnion(trimmed)), SetOptions.merge())
-                                .addOnSuccessListener {
-                                    Toast.makeText(context, "Saved to wishlist: $trimmed", Toast.LENGTH_SHORT).show()
-                                    searchQuery = ""
-                                }
-                                .addOnFailureListener { e ->
-                                    Toast.makeText(context, "Error: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
-                                }
-                        }
-                    }) {
-                        Text("Notify me when added")
-                    }
                 }
             } else {
                 LazyColumn {

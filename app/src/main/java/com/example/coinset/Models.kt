@@ -1,7 +1,5 @@
 package com.example.coinset
 
-import com.google.firebase.Timestamp
-
 data class Country(
     val id: String = "",
     val name: String = "",

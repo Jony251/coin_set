@@ -1,5 +1,4 @@
-package com.example.coinset.ui.auth
-
+import android.util.Patterns
 import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
@@ -183,7 +182,7 @@ fun RegisterScreen(navController: NavController) {
             nicknameError = null
         }
         
-        if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+        if (!Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches()) {
             emailError = "Please enter a valid email address"
             isValid = false
         } else {

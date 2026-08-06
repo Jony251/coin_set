@@ -24,7 +24,6 @@ import com.example.coinset.ui.collection.MyCollectionScreen
 import com.example.coinset.ui.settings.PremiumScreen
 import com.example.coinset.ui.settings.SettingsScreen
 import com.example.coinset.ui.theme.CoinSetTheme
-// import com.google.firebase.FirebaseApp
 
 /**
  * Main Activity of the application.
