@@ -17,10 +17,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
-import com.example.coinset.Coin
-import com.google.firebase.auth.ktx.auth
-import com.google.firebase.firestore.ktx.firestore
-import com.google.firebase.ktx.Firebase
+import com.example.coinset.api.CollectionRepository
+import com.example.coinset.api.UserCoinResponse
 
 /**
  * Screen displaying the user's personal coin collection and statistics.
@@ -28,44 +26,24 @@ import com.google.firebase.ktx.Firebase
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MyCollectionScreen(navController: NavController) {
-    val db = Firebase.firestore
-    val userId = Firebase.auth.currentUser?.uid
-    val coinsWithDetails = remember { mutableStateListOf<Pair<Coin, Map<String, Any>>>() }
+    val repository = remember { CollectionRepository() }
+    val coinsWithDetails = remember { mutableStateListOf<UserCoinResponse>() }
+    var totalPurchaseValue by remember { mutableStateOf(0.0) }
+    var totalSellingValue by remember { mutableStateOf(0.0) }
     var isLoading by remember { mutableStateOf(true) }
 
     // Fetch collection data on launch
     LaunchedEffect(Unit) {
-        if (userId != null) {
-            db.collection("collections").document(userId).get().addOnSuccessListener { doc ->
-                if (doc.exists()) {
-                    @Suppress("UNCHECKED_CAST")
-                    val userCoinsList = doc.get("coins") as? List<Map<String, Any>> ?: emptyList()
-                    val coinIds = userCoinsList.mapNotNull { it["catalogCoinId"] as? String }
-                    
-                    if (coinIds.isNotEmpty()) {
-                        // Fetch catalog details for each coin in the user's collection
-                        db.collection("coins").whereIn("id", coinIds).get().addOnSuccessListener { coinResult ->
-                            coinsWithDetails.clear()
-                            val catalogCoins = coinResult.documents.associateBy({ it.id }, { it.toObject(Coin::class.java)!! })
-                            
-                            userCoinsList.forEach { userCoinMap ->
-                                val cid = userCoinMap["catalogCoinId"] as String
-                                catalogCoins[cid]?.let { detail ->
-                                    coinsWithDetails.add(detail to userCoinMap)
-                                }
-                            }
-                            isLoading = false
-                        }
-                    } else {
-                        coinsWithDetails.clear()
-                        isLoading = false
-                    }
-                } else {
-                    coinsWithDetails.clear()
-                    isLoading = false
-                }
-            }.addOnFailureListener { isLoading = false }
-        }
+        repository.getUserCoins().onSuccess { result ->
+            coinsWithDetails.clear()
+            coinsWithDetails.addAll(result)
+            
+            repository.getCollectionStats().onSuccess { stats ->
+                totalPurchaseValue = stats.totalPurchaseValue
+                totalSellingValue = stats.totalSellingValue
+            }
+            isLoading = false
+        }.onFailure { isLoading = false }
     }
 
     Scaffold(
@@ -76,8 +54,6 @@ fun MyCollectionScreen(navController: NavController) {
         } else {
             // Calculate collection statistics
             val totalCoins = coinsWithDetails.size
-            val totalPriceMin = coinsWithDetails.sumOf { it.first.estimatedValueMin }
-            val totalPriceMax = coinsWithDetails.sumOf { it.first.estimatedValueMax }
 
             Column(Modifier.padding(padding).fillMaxSize()) {
                 // Statistics Card
@@ -93,8 +69,8 @@ fun MyCollectionScreen(navController: NavController) {
                             Text("$totalCoins pcs.", fontWeight = FontWeight.Bold)
                         }
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("Estimated Value:")
-                            Text("$totalPriceMin - $totalPriceMax RUB", fontWeight = FontWeight.Bold)
+                            Text("Total Purchase Value:")
+                            Text("$totalPurchaseValue RUB", fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -103,9 +79,9 @@ fun MyCollectionScreen(navController: NavController) {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Collection is empty") }
                 } else {
                     LazyColumn(Modifier.weight(1f)) {
-                        items(coinsWithDetails) { (coin, userData) ->
-                            CollectionItem(coin, userData) {
-                                navController.navigate("coin_detail/${coin.id}")
+                        items(coinsWithDetails) { userCoin ->
+                            CollectionItem(userCoin) {
+                                navController.navigate("coin_detail/${userCoin.coinId}")
                             }
                         }
                     }
@@ -119,7 +95,7 @@ fun MyCollectionScreen(navController: NavController) {
  * Single item row in the collection list.
  */
 @Composable
-fun CollectionItem(coin: Coin, userData: Map<String, Any>, onClick: () -> Unit) {
+fun CollectionItem(userCoin: UserCoinResponse, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -127,7 +103,7 @@ fun CollectionItem(coin: Coin, userData: Map<String, Any>, onClick: () -> Unit) 
             .clickable { onClick() }
     ) {
         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            val userPhoto = userData["photoUrl"] as? String
+            val userPhoto = userCoin.images.firstOrNull()
             if (!userPhoto.isNullOrEmpty()) {
                 AsyncImage(
                     model = userPhoto, 
@@ -140,7 +116,7 @@ fun CollectionItem(coin: Coin, userData: Map<String, Any>, onClick: () -> Unit) 
             Column(Modifier.weight(1f)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text(
-                        text = coin.name, 
+                        text = userCoin.coinName ?: "Unknown Coin", 
                         style = MaterialTheme.typography.titleMedium, 
                         modifier = Modifier.weight(1f), 
                         maxLines = 1, 
@@ -151,14 +127,14 @@ fun CollectionItem(coin: Coin, userData: Map<String, Any>, onClick: () -> Unit) 
                         shape = MaterialTheme.shapes.small
                     ) {
                         Text(
-                            text = userData["condition"] as? String ?: "UNC", 
+                            text = userCoin.condition, 
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp), 
                             color = Color.White, 
                             fontSize = 12.sp
                         )
                     }
                 }
-                val note = userData["notes"] as? String ?: ""
+                val note = userCoin.notes ?: ""
                 if (note.isNotEmpty()) {
                     Text(
                         text = "Note: $note", 
@@ -168,7 +144,7 @@ fun CollectionItem(coin: Coin, userData: Map<String, Any>, onClick: () -> Unit) 
                         overflow = TextOverflow.Ellipsis
                     )
                 }
-                Text("${coin.estimatedValueMin} - ${coin.estimatedValueMax} RUB", style = MaterialTheme.typography.labelSmall)
+                Text("${userCoin.purchasePrice ?: 0.0} RUB", style = MaterialTheme.typography.labelSmall)
             }
         }
     }

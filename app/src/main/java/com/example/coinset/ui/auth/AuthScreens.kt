@@ -12,22 +12,20 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.coinset.R
-import com.google.firebase.Timestamp
-import com.google.firebase.auth.ktx.auth
-import com.google.firebase.firestore.ktx.firestore
-import com.google.firebase.ktx.Firebase
-import java.text.SimpleDateFormat
-import java.util.*
+import com.example.coinset.api.AuthRepository
+import kotlinx.coroutines.launch
 
 /**
  * Screen for user login.
  */
 @Composable
 fun LoginScreen(navController: NavController) {
-    var email by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") } // API login uses username, but UI says Email. Let's treat it as username for now or adjust.
     var password by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val repository = remember { AuthRepository() }
 
     Column(
         modifier = Modifier.fillMaxSize().padding(32.dp),
@@ -46,7 +44,7 @@ fun LoginScreen(navController: NavController) {
         TextField(
             value = email,
             onValueChange = { email = it },
-            label = { Text("Email") },
+            label = { Text("Username") },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true
         )
@@ -67,15 +65,15 @@ fun LoginScreen(navController: NavController) {
                 onClick = {
                     if (email.isNotEmpty() && password.isNotEmpty()) {
                         isLoading = true
-                        Firebase.auth.signInWithEmailAndPassword(email, password)
-                            .addOnSuccessListener { 
+                        scope.launch {
+                            repository.login(email, password).onSuccess {
                                 isLoading = false
-                                navController.navigate("main") { popUpTo("login") { inclusive = true } } 
-                            }
-                            .addOnFailureListener { 
+                                navController.navigate("main") { popUpTo("login") { inclusive = true } }
+                            }.onFailure {
                                 isLoading = false
-                                Toast.makeText(context, "Error: ${it.message}", Toast.LENGTH_LONG).show() 
+                                Toast.makeText(context, "Error: ${it.message}", Toast.LENGTH_LONG).show()
                             }
+                        }
                     } else {
                         Toast.makeText(context, "Please fill all fields", Toast.LENGTH_SHORT).show()
                     }
@@ -101,8 +99,9 @@ fun RegisterScreen(navController: NavController) {
     var password by remember { mutableStateOf("") }
     var nickname by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
-    val db = Firebase.firestore
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val repository = remember { AuthRepository() }
 
     Column(
         modifier = Modifier.fillMaxSize().padding(32.dp),
@@ -115,7 +114,7 @@ fun RegisterScreen(navController: NavController) {
         TextField(
             value = nickname,
             onValueChange = { nickname = it },
-            label = { Text("Nickname") },
+            label = { Text("Username") },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true
         )
@@ -144,42 +143,21 @@ fun RegisterScreen(navController: NavController) {
                 onClick = {
                     if (email.isNotEmpty() && password.isNotEmpty() && nickname.isNotEmpty()) {
                         isLoading = true
-                        Firebase.auth.createUserWithEmailAndPassword(email, password)
-                            .addOnSuccessListener { result ->
-                                val userId = result.user?.uid ?: ""
-                                val now = Timestamp.now()
-                                
-                                // Verification deadline (now + 24 hours)
-                                val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US)
-                                sdf.timeZone = TimeZone.getTimeZone("UTC")
-                                val deadlineStr = sdf.format(Date(System.currentTimeMillis() + 86400000))
-
-                                val userData = hashMapOf(
-                                    "email" to email,
-                                    "nickname" to nickname,
-                                    "displayName" to nickname,
-                                    "createdAt" to now,
-                                    "updatedAt" to now,
-                                    "proActivatedAt" to now,
-                                    "isPro" to false,
-                                    "emailVerified" to true,
-                                    "photo" to null,
-                                    "verificationDeadline" to deadlineStr
-                                )
-                                db.collection("users").document(userId).set(userData)
-                                    .addOnSuccessListener { 
-                                        isLoading = false
-                                        navController.navigate("main") { popUpTo("login") { inclusive = true } } 
-                                    }
-                                    .addOnFailureListener { 
-                                        isLoading = false
-                                        Toast.makeText(context, "DB Error: ${it.message}", Toast.LENGTH_LONG).show()
-                                    }
-                            }
-                            .addOnFailureListener { 
+                        scope.launch {
+                            repository.register(nickname, email, password).onSuccess {
+                                // After register, we might need to login automatically or redirect to login
+                                repository.login(nickname, password).onSuccess {
+                                    isLoading = false
+                                    navController.navigate("main") { popUpTo("login") { inclusive = true } }
+                                }.onFailure {
+                                    isLoading = false
+                                    navController.navigate("login") { popUpTo("register") { inclusive = true } }
+                                }
+                            }.onFailure {
                                 isLoading = false
-                                Toast.makeText(context, "Registration Error: ${it.message}", Toast.LENGTH_LONG).show() 
+                                Toast.makeText(context, "Registration Error: ${it.message}", Toast.LENGTH_LONG).show()
                             }
+                        }
                     } else {
                         Toast.makeText(context, "Please fill all fields", Toast.LENGTH_SHORT).show()
                     }

@@ -9,10 +9,7 @@ import java.util.concurrent.TimeUnit
 
 object RetrofitClient {
     
-    // Эмулятор: http://10.0.2.2:8000/
-    // Физическое устройство: http://YOUR_LOCAL_IP:8000/
-    // AWS (будущее): http://your-aws-domain.com/
-    private const val BASE_URL = "http://10.0.2.2:8000/" 
+    private const val BASE_URL = "https://coinset.bluecat.cc/" 
     
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY

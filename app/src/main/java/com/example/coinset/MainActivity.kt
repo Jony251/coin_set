@@ -24,26 +24,17 @@ import com.example.coinset.ui.collection.MyCollectionScreen
 import com.example.coinset.ui.settings.PremiumScreen
 import com.example.coinset.ui.settings.SettingsScreen
 import com.example.coinset.ui.theme.CoinSetTheme
-import com.google.firebase.FirebaseApp
-import com.google.firebase.auth.ktx.auth
-import com.google.firebase.ktx.Firebase
+// import com.google.firebase.FirebaseApp
 
 /**
  * Main Activity of the application.
- * Initializes Firebase and sets up the root navigation.
+ * Initializes TokenManager and sets up the root navigation.
  */
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
         TokenManager.init(this)
-
-        // Initialize Firebase SDK
-        try { 
-            FirebaseApp.initializeApp(this) 
-        } catch (e: Exception) {
-            // App already initialized or failed
-        }
         
         enableEdgeToEdge()
         
@@ -62,11 +53,11 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun RootNavigation() {
     val navController = rememberNavController()
-    val currentUser = Firebase.auth.currentUser
+    val accessToken = TokenManager.getAccessToken()
 
     NavHost(
         navController = navController,
-        startDestination = if (currentUser != null) "main" else "login"
+        startDestination = if (accessToken != null) "main" else "login"
     ) {
         composable("login") { LoginScreen(navController) }
         composable("register") { RegisterScreen(navController) }
