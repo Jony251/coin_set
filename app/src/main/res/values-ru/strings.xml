@@ -22,6 +22,17 @@
     <string name="catalog_rarity_scale">Редкость (по шкале): %1$s</string>
     <string name="catalog_rarity_label">Редкость по каталогу: %1$s</string>
     <string name="catalog_rarity_common">Обычная</string>
+    <string name="metal_gold">Золото</string>
+    <string name="metal_silver">Серебро</string>
+    <string name="metal_copper">Медь</string>
+    <string name="metal_bronze">Бронза</string>
+    <string name="metal_brass">Латунь</string>
+    <string name="metal_other">Другое</string>
+    <string name="rarity_common">Обычная</string>
+    <string name="rarity_uncommon">Нечастая</string>
+    <string name="rarity_rare">Редкая</string>
+    <string name="rarity_very_rare">Очень редкая</string>
+    <string name="rarity_extremely_rare">Крайне редкая</string>
     <string name="catalog_toast_added">Добавлено!</string>
     <string name="catalog_toast_error">Ошибка: %1$s</string>
     <string name="catalog_details_title">Подробности</string>

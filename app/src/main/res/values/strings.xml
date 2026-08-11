@@ -22,6 +22,17 @@
     <string name="catalog_rarity_scale">Rarity (Scale): %1$s</string>
     <string name="catalog_rarity_label">Catalog Rarity: %1$s</string>
     <string name="catalog_rarity_common">Common</string>
+    <string name="metal_gold">Gold</string>
+    <string name="metal_silver">Silver</string>
+    <string name="metal_copper">Copper</string>
+    <string name="metal_bronze">Bronze</string>
+    <string name="metal_brass">Brass</string>
+    <string name="metal_other">Other</string>
+    <string name="rarity_common">Common</string>
+    <string name="rarity_uncommon">Uncommon</string>
+    <string name="rarity_rare">Rare</string>
+    <string name="rarity_very_rare">Very Rare</string>
+    <string name="rarity_extremely_rare">Extremely Rare</string>
     <string name="catalog_toast_added">Added!</string>
     <string name="catalog_toast_error">Error: %1$s</string>
     <string name="catalog_details_title">Details</string>

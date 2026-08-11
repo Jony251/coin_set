@@ -1,5 +1,6 @@
 package com.example.coinset.api
 
+import androidx.appcompat.app.AppCompatDelegate
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -29,9 +30,28 @@ object RetrofitClient {
         chain.proceed(request)
     }
 
+    // Appends ?lang=ru|en|he to every request based on the current per-app
+    // language (Settings > Language), so catalog text (coin names,
+    // denominations, series, ruler/country names - which the backend
+    // localizes server-side) comes back already in the right language
+    // without every screen/repository having to pass it explicitly.
+    private val langInterceptor = Interceptor { chain ->
+        val tag = AppCompatDelegate.getApplicationLocales().toLanguageTags()
+        val lang = when {
+            tag.startsWith("en") -> "en"
+            tag.startsWith("he") || tag.startsWith("iw") -> "he"
+            else -> "ru"
+        }
+        val urlWithLang = chain.request().url.newBuilder()
+            .setQueryParameter("lang", lang)
+            .build()
+        chain.proceed(chain.request().newBuilder().url(urlWithLang).build())
+    }
+
     private val okHttpClient = OkHttpClient.Builder()
         .addInterceptor(loggingInterceptor)
         .addInterceptor(authInterceptor)
+        .addInterceptor(langInterceptor)
         .authenticator(TokenAuthenticator)
         .connectTimeout(30, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)

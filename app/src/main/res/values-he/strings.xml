@@ -22,6 +22,17 @@
     <string name="catalog_rarity_scale">נדירות (בסולם): %1$s</string>
     <string name="catalog_rarity_label">נדירות בקטלוג: %1$s</string>
     <string name="catalog_rarity_common">רגיל</string>
+    <string name="metal_gold">זהב</string>
+    <string name="metal_silver">כסף</string>
+    <string name="metal_copper">נחושת</string>
+    <string name="metal_bronze">ברונזה</string>
+    <string name="metal_brass">פליז</string>
+    <string name="metal_other">אחר</string>
+    <string name="rarity_common">נפוץ</string>
+    <string name="rarity_uncommon">לא נפוץ</string>
+    <string name="rarity_rare">נדיר</string>
+    <string name="rarity_very_rare">נדיר מאוד</string>
+    <string name="rarity_extremely_rare">נדיר ביותר</string>
     <string name="catalog_toast_added">נוסף!</string>
     <string name="catalog_toast_error">שגיאה: %1$s</string>
     <string name="catalog_details_title">פרטים</string>

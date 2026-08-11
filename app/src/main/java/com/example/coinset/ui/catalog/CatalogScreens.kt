@@ -38,6 +38,32 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
+ * The backend's metal_type/rarity fields are fixed enums always returned in
+ * English (e.g. "gold", "extremely_rare") regardless of the ?lang= the app
+ * sends for catalog text - only the label needs stringResource(), the enum
+ * *value* itself needs mapping to a resource, or it shows English text
+ * inside an otherwise-translated screen.
+ */
+@Composable
+private fun localizedMetalType(metalType: String): String = when (metalType.lowercase()) {
+    "gold" -> stringResource(R.string.metal_gold)
+    "silver" -> stringResource(R.string.metal_silver)
+    "copper" -> stringResource(R.string.metal_copper)
+    "bronze" -> stringResource(R.string.metal_bronze)
+    "brass" -> stringResource(R.string.metal_brass)
+    else -> stringResource(R.string.metal_other)
+}
+
+@Composable
+private fun localizedRarity(rarity: String): String = when (rarity.lowercase()) {
+    "uncommon" -> stringResource(R.string.rarity_uncommon)
+    "rare" -> stringResource(R.string.rarity_rare)
+    "very_rare" -> stringResource(R.string.rarity_very_rare)
+    "extremely_rare" -> stringResource(R.string.rarity_extremely_rare)
+    else -> stringResource(R.string.rarity_common)
+}
+
+/**
  * Screen displaying countries with advanced search.
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -325,10 +351,10 @@ fun CoinTypeScreen(navController: NavController, rulerId: String, category: Stri
                 Card(Modifier.fillMaxWidth().padding(8.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
                     Column(Modifier.padding(16.dp)) {
                         Text(stringResource(R.string.catalog_specifications), fontWeight = FontWeight.Bold)
-                        Text(stringResource(R.string.catalog_composition, first.metalType))
+                        Text(stringResource(R.string.catalog_composition, localizedMetalType(first.metalType)))
                         Text(stringResource(R.string.catalog_weight_diameter, first.weight.toString(), first.diameter.toString()))
                         if (first.rarity.isNotEmpty()) {
-                            Text(stringResource(R.string.catalog_rarity_scale, first.rarity), color = MaterialTheme.colorScheme.primary)
+                            Text(stringResource(R.string.catalog_rarity_scale, localizedRarity(first.rarity)), color = MaterialTheme.colorScheme.primary)
                         }
                     }
                 }
@@ -338,7 +364,7 @@ fun CoinTypeScreen(navController: NavController, rulerId: String, category: Stri
                     ListItem(
                         headlineContent = { Text("${coin.year ?: ""} ${coin.description ?: ""}") },
                         supportingContent = {
-                            Text(stringResource(R.string.catalog_rarity_label, coin.rarity.ifEmpty { stringResource(R.string.catalog_rarity_common) }))
+                            Text(stringResource(R.string.catalog_rarity_label, localizedRarity(coin.rarity)))
                         },
                         trailingContent = {
                     val addedText = stringResource(R.string.catalog_toast_added)
@@ -414,9 +440,9 @@ fun CoinDetailScreen(navController: NavController, coinId: String) {
                 item {
                     Text(stringResource(R.string.catalog_characteristics), fontWeight = FontWeight.Bold, fontSize = 20.sp)
                     InfoRow(stringResource(R.string.catalog_label_denomination), coin!!.denomination ?: "")
-                    InfoRow(stringResource(R.string.catalog_label_metal), coin!!.metalType)
+                    InfoRow(stringResource(R.string.catalog_label_metal), localizedMetalType(coin!!.metalType))
                     InfoRow(stringResource(R.string.catalog_label_year), coin!!.year?.toString() ?: "")
-                    InfoRow(stringResource(R.string.catalog_label_rarity), coin!!.rarity)
+                    InfoRow(stringResource(R.string.catalog_label_rarity), localizedRarity(coin!!.rarity))
                     coin!!.series?.let { InfoRow(stringResource(R.string.catalog_label_series), it) }
                     coin!!.rarityCode?.let { InfoRow(stringResource(R.string.catalog_label_rarity_code), it) }
                     coin!!.mintageSpmd?.let { InfoRow(stringResource(R.string.catalog_label_mintage_spmd), it) }
