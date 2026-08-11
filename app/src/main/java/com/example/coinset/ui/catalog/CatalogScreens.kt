@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -81,17 +82,17 @@ fun CountryListScreen(navController: NavController) {
                         contentDescription = null, 
                         modifier = Modifier.size(32.dp).padding(end = 8.dp)
                     )
-                    Text("Catalog") 
+                    Text(stringResource(R.string.catalog_title))
                 }
             }
-        ) 
+        )
     }) { padding ->
         Column(modifier = Modifier.padding(padding).fillMaxSize()) {
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
                 modifier = Modifier.fillMaxWidth().padding(16.dp),
-                placeholder = { Text("Search country (Italy, Russia...)...") },
+                placeholder = { Text(stringResource(R.string.catalog_search_country_placeholder)) },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 singleLine = true,
                 shape = MaterialTheme.shapes.medium
@@ -106,7 +107,7 @@ fun CountryListScreen(navController: NavController) {
                     verticalArrangement = Arrangement.Center
                 ) {
                     Text(
-                        text = "Country \"$searchQuery\" not found. It will be added soon!",
+                        text = stringResource(R.string.catalog_country_not_found, searchQuery),
                         style = MaterialTheme.typography.bodyLarge,
                         textAlign = TextAlign.Center,
                         color = MaterialTheme.colorScheme.secondary
@@ -260,7 +261,7 @@ fun CoinListScreen(navController: NavController, rulerId: String, category: Stri
         ) 
     }) { padding ->
         if (isLoading) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-        else if (denominations.isEmpty()) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("No denominations found") }
+        else if (denominations.isEmpty()) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(stringResource(R.string.catalog_no_denominations_found)) }
         else LazyColumn(modifier = Modifier.padding(padding)) {
             items(denominations) { den ->
                 ListItem(
@@ -323,11 +324,11 @@ fun CoinTypeScreen(navController: NavController, rulerId: String, category: Stri
                 val first = coins[0]
                 Card(Modifier.fillMaxWidth().padding(8.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
                     Column(Modifier.padding(16.dp)) {
-                        Text("Specifications", fontWeight = FontWeight.Bold)
-                        Text("Composition: ${first.metalType}")
-                        Text("Weight: ${first.weight}g | Diameter: ${first.diameter}mm")
+                        Text(stringResource(R.string.catalog_specifications), fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.catalog_composition, first.metalType))
+                        Text(stringResource(R.string.catalog_weight_diameter, first.weight.toString(), first.diameter.toString()))
                         if (first.rarity.isNotEmpty()) {
-                            Text("Rarity (Scale): ${first.rarity}", color = MaterialTheme.colorScheme.primary)
+                            Text(stringResource(R.string.catalog_rarity_scale, first.rarity), color = MaterialTheme.colorScheme.primary)
                         }
                     }
                 }
@@ -336,16 +337,18 @@ fun CoinTypeScreen(navController: NavController, rulerId: String, category: Stri
                 items(coins) { coin ->
                     ListItem(
                         headlineContent = { Text("${coin.year ?: ""} ${coin.description ?: ""}") },
-                        supportingContent = { 
-                            Text("Catalog Rarity: ${coin.rarity.ifEmpty { "Common" }}") 
+                        supportingContent = {
+                            Text(stringResource(R.string.catalog_rarity_label, coin.rarity.ifEmpty { stringResource(R.string.catalog_rarity_common) }))
                         },
                         trailingContent = {
+                    val addedText = stringResource(R.string.catalog_toast_added)
+                    val errorTemplate = stringResource(R.string.catalog_toast_error)
                     IconButton(onClick = {
                         scope.launch {
                             collectionRepo.addCoinToCollection(coin.id, "UNC").onSuccess { _: UserCoinResponse ->
-                                Toast.makeText(context, "Added!", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, addedText, Toast.LENGTH_SHORT).show()
                             }.onFailure { e: Throwable ->
-                                Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, String.format(errorTemplate, e.message), Toast.LENGTH_SHORT).show()
                             }
                         }
                     }) { Icon(Icons.Default.AddCircle, null, tint = MaterialTheme.colorScheme.primary) }
@@ -404,23 +407,23 @@ fun CoinDetailScreen(navController: NavController, coinId: String) {
         }
     }
 
-    Scaffold(topBar = { TopAppBar(title = { Text(coin?.name ?: "Details") }, navigationIcon = { IconButton(onClick = { navController.popBackStack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) } }) }) { padding ->
+    Scaffold(topBar = { TopAppBar(title = { Text(coin?.name ?: stringResource(R.string.catalog_details_title)) }, navigationIcon = { IconButton(onClick = { navController.popBackStack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) } }) }) { padding ->
         if (isLoading) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
         else if (coin != null) {
             LazyColumn(modifier = Modifier.padding(padding).padding(16.dp)) {
                 item {
-                    Text("Characteristics:", fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                    InfoRow("Denomination", coin!!.denomination ?: "")
-                    InfoRow("Metal", coin!!.metalType)
-                    InfoRow("Year", coin!!.year?.toString() ?: "")
-                    InfoRow("Rarity", coin!!.rarity)
-                    coin!!.series?.let { InfoRow("Series", it) }
-                    coin!!.rarityCode?.let { InfoRow("Rarity Code", it) }
-                    coin!!.mintageSpmd?.let { InfoRow("Mintage (SPMD)", it) }
-                    coin!!.mintageMmd?.let { InfoRow("Mintage (MMD)", it) }
-                    coin!!.priceEstimate?.let { InfoRow("Estimated Price", it) }
+                    Text(stringResource(R.string.catalog_characteristics), fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                    InfoRow(stringResource(R.string.catalog_label_denomination), coin!!.denomination ?: "")
+                    InfoRow(stringResource(R.string.catalog_label_metal), coin!!.metalType)
+                    InfoRow(stringResource(R.string.catalog_label_year), coin!!.year?.toString() ?: "")
+                    InfoRow(stringResource(R.string.catalog_label_rarity), coin!!.rarity)
+                    coin!!.series?.let { InfoRow(stringResource(R.string.catalog_label_series), it) }
+                    coin!!.rarityCode?.let { InfoRow(stringResource(R.string.catalog_label_rarity_code), it) }
+                    coin!!.mintageSpmd?.let { InfoRow(stringResource(R.string.catalog_label_mintage_spmd), it) }
+                    coin!!.mintageMmd?.let { InfoRow(stringResource(R.string.catalog_label_mintage_mmd), it) }
+                    coin!!.priceEstimate?.let { InfoRow(stringResource(R.string.catalog_label_estimated_price), it) }
 
-                    coin!!.description?.let { InfoRow("Description", it) }
+                    coin!!.description?.let { InfoRow(stringResource(R.string.catalog_label_description), it) }
 
                     Spacer(Modifier.height(24.dp))
                 }
@@ -429,7 +432,7 @@ fun CoinDetailScreen(navController: NavController, coinId: String) {
                         Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f))) {
                             Column(Modifier.padding(16.dp)) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text("Your Coin:", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                                    Text(stringResource(R.string.catalog_your_coin), fontWeight = FontWeight.Bold, fontSize = 18.sp)
                                     // if (!isUserPro) Icon(Icons.Default.Lock, null, Modifier.padding(start = 8.dp).size(18.dp))
                                 }
                                 Box(Modifier.fillMaxWidth().height(200.dp).clip(MaterialTheme.shapes.medium).clickable(true) { launcher.launch("image/*") }, contentAlignment = Alignment.Center) {
@@ -438,12 +441,12 @@ fun CoinDetailScreen(navController: NavController, coinId: String) {
                                     else Icon(Icons.Default.Add, null, Modifier.size(48.dp))
                                 }
                                 Spacer(Modifier.height(16.dp))
-                                OutlinedTextField(value = noteText, onValueChange = { noteText = it }, label = { Text("Notes") }, modifier = Modifier.fillMaxWidth())
+                                OutlinedTextField(value = noteText, onValueChange = { noteText = it }, label = { Text(stringResource(R.string.catalog_notes_label)) }, modifier = Modifier.fillMaxWidth())
                                 Button(onClick = {
                                     scope.launch {
                                         // Update logic via API
                                     }
-                                }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) { Text("Save") }
+                                }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) { Text(stringResource(R.string.common_save)) }
                             }
                         }
                     }

@@ -10,6 +10,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.coinset.R
@@ -33,14 +34,20 @@ fun LoginScreen(navController: NavController) {
     val scope = rememberCoroutineScope()
     val repository = remember { AuthRepository() }
 
+    val usernameRequiredMsg = stringResource(R.string.auth_error_username_required)
+    val passwordRequiredMsg = stringResource(R.string.auth_error_password_required)
+    val invalidCredentialsMsg = stringResource(R.string.auth_error_invalid_credentials)
+    val serverErrorTemplate = stringResource(R.string.auth_error_server)
+    val connectionErrorMsg = stringResource(R.string.auth_error_connection)
+
     if (showErrorDialog != null) {
         AlertDialog(
             onDismissRequest = { showErrorDialog = null },
-            title = { Text("Login Error") },
+            title = { Text(stringResource(R.string.auth_login_error_title)) },
             text = { Text(showErrorDialog!!) },
             confirmButton = {
                 TextButton(onClick = { showErrorDialog = null }) {
-                    Text("OK")
+                    Text(stringResource(R.string.common_ok))
                 }
             }
         )
@@ -49,13 +56,13 @@ fun LoginScreen(navController: NavController) {
     fun validate(): Boolean {
         var isValid = true
         if (username.isBlank()) {
-            usernameError = "Username is required"
+            usernameError = usernameRequiredMsg
             isValid = false
         } else {
             usernameError = null
         }
         if (password.isBlank()) {
-            passwordError = "Password is required"
+            passwordError = passwordRequiredMsg
             isValid = false
         } else {
             passwordError = null
@@ -70,20 +77,20 @@ fun LoginScreen(navController: NavController) {
     ) {
         Image(
             painter = painterResource(id = R.drawable.icon),
-            contentDescription = "App Icon",
+            contentDescription = stringResource(R.string.auth_app_icon_description),
             modifier = Modifier.size(100.dp)
         )
         Spacer(modifier = Modifier.height(24.dp))
-        Text(text = "Coin Set", style = MaterialTheme.typography.headlineLarge)
+        Text(text = stringResource(R.string.auth_app_title), style = MaterialTheme.typography.headlineLarge)
         Spacer(modifier = Modifier.height(32.dp))
-        
+
         OutlinedTextField(
             value = username,
-            onValueChange = { 
+            onValueChange = {
                 username = it
                 if (usernameError != null) usernameError = null
             },
-            label = { Text("Username") },
+            label = { Text(stringResource(R.string.auth_label_username)) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
             isError = usernameError != null,
@@ -92,11 +99,11 @@ fun LoginScreen(navController: NavController) {
         Spacer(modifier = Modifier.height(8.dp))
         OutlinedTextField(
             value = password,
-            onValueChange = { 
+            onValueChange = {
                 password = it
                 if (passwordError != null) passwordError = null
             },
-            label = { Text("Password") },
+            label = { Text(stringResource(R.string.auth_label_password)) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
             isError = passwordError != null,
@@ -119,24 +126,24 @@ fun LoginScreen(navController: NavController) {
                                 isLoading = false
                                 val errorMessage = when (it) {
                                     is retrofit2.HttpException -> {
-                                        if (it.code() == 401) "Invalid username or password"
-                                        else "Server error: ${it.code()}"
+                                        if (it.code() == 401) invalidCredentialsMsg
+                                        else String.format(serverErrorTemplate, it.code())
                                     }
-                                    else -> it.message ?: "Connection error"
+                                    else -> it.message ?: connectionErrorMsg
                                 }
                                 showErrorDialog = errorMessage
                             }
                         }
                     }
-                }, 
+                },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Login")
+                Text(stringResource(R.string.auth_action_login))
             }
         }
-        
+
         TextButton(onClick = { navController.navigate("register") }) {
-            Text("Register Account")
+            Text(stringResource(R.string.auth_action_register_account))
         }
     }
 }
@@ -161,14 +168,21 @@ fun RegisterScreen(navController: NavController) {
     val scope = rememberCoroutineScope()
     val repository = remember { AuthRepository() }
 
+    val nicknameMinLengthMsg = stringResource(R.string.auth_error_username_min_length)
+    val emailInvalidMsg = stringResource(R.string.auth_error_email_invalid)
+    val passwordMinLengthMsg = stringResource(R.string.auth_error_password_min_length)
+    val usernameEmailTakenMsg = stringResource(R.string.auth_error_username_email_taken)
+    val serverErrorRetryTemplate = stringResource(R.string.auth_error_server_retry)
+    val connectionErrorCheckInternetMsg = stringResource(R.string.auth_error_connection_check_internet)
+
     if (showErrorDialog != null) {
         AlertDialog(
             onDismissRequest = { showErrorDialog = null },
-            title = { Text("Registration Error") },
+            title = { Text(stringResource(R.string.auth_register_error_title)) },
             text = { Text(showErrorDialog!!) },
             confirmButton = {
                 TextButton(onClick = { showErrorDialog = null }) {
-                    Text("OK")
+                    Text(stringResource(R.string.common_ok))
                 }
             }
         )
@@ -176,28 +190,28 @@ fun RegisterScreen(navController: NavController) {
 
     fun validate(): Boolean {
         var isValid = true
-        
+
         if (nickname.trim().length < 3) {
-            nicknameError = "Username must be at least 3 characters"
+            nicknameError = nicknameMinLengthMsg
             isValid = false
         } else {
             nicknameError = null
         }
-        
+
         if (!Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches()) {
-            emailError = "Please enter a valid email address"
+            emailError = emailInvalidMsg
             isValid = false
         } else {
             emailError = null
         }
-        
+
         if (password.length < 6) {
-            passwordError = "Password must be at least 6 characters"
+            passwordError = passwordMinLengthMsg
             isValid = false
         } else {
             passwordError = null
         }
-        
+
         return isValid
     }
 
@@ -206,16 +220,16 @@ fun RegisterScreen(navController: NavController) {
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(text = "Create Account", style = MaterialTheme.typography.headlineLarge)
+        Text(text = stringResource(R.string.auth_create_account_title), style = MaterialTheme.typography.headlineLarge)
         Spacer(modifier = Modifier.height(32.dp))
-        
+
         OutlinedTextField(
             value = nickname,
-            onValueChange = { 
+            onValueChange = {
                 nickname = it
                 if (nicknameError != null) nicknameError = null
             },
-            label = { Text("Username") },
+            label = { Text(stringResource(R.string.auth_label_username)) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
             isError = nicknameError != null,
@@ -224,11 +238,11 @@ fun RegisterScreen(navController: NavController) {
         Spacer(modifier = Modifier.height(8.dp))
         OutlinedTextField(
             value = email,
-            onValueChange = { 
+            onValueChange = {
                 email = it
                 if (emailError != null) emailError = null
             },
-            label = { Text("Email") },
+            label = { Text(stringResource(R.string.auth_label_email)) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
             isError = emailError != null,
@@ -237,11 +251,11 @@ fun RegisterScreen(navController: NavController) {
         Spacer(modifier = Modifier.height(8.dp))
         OutlinedTextField(
             value = password,
-            onValueChange = { 
+            onValueChange = {
                 password = it
                 if (passwordError != null) passwordError = null
             },
-            label = { Text("Password") },
+            label = { Text(stringResource(R.string.auth_label_password)) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
             isError = passwordError != null,
@@ -269,19 +283,19 @@ fun RegisterScreen(navController: NavController) {
                                 isLoading = false
                                 val errorMessage = when (it) {
                                     is retrofit2.HttpException -> {
-                                        if (it.code() == 422) "This username or email is already taken."
-                                        else "Server error (${it.code()}). Please try again later."
+                                        if (it.code() == 422) usernameEmailTakenMsg
+                                        else String.format(serverErrorRetryTemplate, it.code())
                                     }
-                                    else -> it.message ?: "Connection error. Check your internet."
+                                    else -> it.message ?: connectionErrorCheckInternetMsg
                                 }
                                 showErrorDialog = errorMessage
                             }
                         }
                     }
-                }, 
+                },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Register")
+                Text(stringResource(R.string.auth_action_register))
             }
         }
     }

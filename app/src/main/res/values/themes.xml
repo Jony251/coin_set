@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.CoinSet" parent="android:Theme.Material.Light.NoActionBar" />
+    <!-- AppCompat-derived (not android:Theme.Material.*) because MainActivity is now
+         an AppCompatActivity - AppCompatDelegate.setApplicationLocales() requires it,
+         and AppCompatActivity throws if given a non-AppCompat theme. -->
+    <style name="Theme.CoinSet" parent="Theme.AppCompat.Light.NoActionBar" />
 </resources>

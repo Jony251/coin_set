@@ -11,12 +11,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import com.example.coinset.R
 import com.example.coinset.api.CollectionRepository
 import com.example.coinset.api.UserCoinResponse
 
@@ -47,7 +49,7 @@ fun MyCollectionScreen(navController: NavController) {
     }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("My Collection") }) }
+        topBar = { TopAppBar(title = { Text(stringResource(R.string.collection_title)) }) }
     ) { padding ->
         if (isLoading) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
@@ -62,21 +64,21 @@ fun MyCollectionScreen(navController: NavController) {
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
                 ) {
                     Column(Modifier.padding(16.dp)) {
-                        Text("Collection Stats", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                        Text(stringResource(R.string.collection_stats), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
                         Spacer(Modifier.height(8.dp))
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("Total Coins:")
-                            Text("$totalCoins pcs.", fontWeight = FontWeight.Bold)
+                            Text(stringResource(R.string.collection_total_coins))
+                            Text(stringResource(R.string.collection_total_coins_value, totalCoins), fontWeight = FontWeight.Bold)
                         }
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("Total Purchase Value:")
-                            Text("$totalPurchaseValue RUB", fontWeight = FontWeight.Bold)
+                            Text(stringResource(R.string.collection_total_purchase_value))
+                            Text(stringResource(R.string.collection_total_purchase_value_rub, totalPurchaseValue.toString()), fontWeight = FontWeight.Bold)
                         }
                     }
                 }
 
                 if (coinsWithDetails.isEmpty()) {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Collection is empty") }
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(stringResource(R.string.collection_empty)) }
                 } else {
                     LazyColumn(Modifier.weight(1f)) {
                         items(coinsWithDetails) { userCoin ->
@@ -116,7 +118,7 @@ fun CollectionItem(userCoin: UserCoinResponse, onClick: () -> Unit) {
             Column(Modifier.weight(1f)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text(
-                        text = userCoin.coinName ?: "Unknown Coin", 
+                        text = userCoin.coinName ?: stringResource(R.string.collection_unknown_coin),
                         style = MaterialTheme.typography.titleMedium, 
                         modifier = Modifier.weight(1f), 
                         maxLines = 1, 
@@ -137,14 +139,14 @@ fun CollectionItem(userCoin: UserCoinResponse, onClick: () -> Unit) {
                 val note = userCoin.notes ?: ""
                 if (note.isNotEmpty()) {
                     Text(
-                        text = "Note: $note", 
-                        style = MaterialTheme.typography.bodySmall, 
-                        color = MaterialTheme.colorScheme.secondary, 
-                        maxLines = 1, 
+                        text = stringResource(R.string.collection_note_prefix, note),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.secondary,
+                        maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                 }
-                Text("${userCoin.purchasePrice ?: 0.0} RUB", style = MaterialTheme.typography.labelSmall)
+                Text(stringResource(R.string.collection_price_rub, (userCoin.purchasePrice ?: 0.0).toString()), style = MaterialTheme.typography.labelSmall)
             }
         }
     }

@@ -1,3 +1,109 @@
 <resources>
     <string name="app_name">coin set</string>
+
+    <!-- Common -->
+    <string name="common_ok">OK</string>
+    <string name="common_save">Save</string>
+    <string name="common_loading">Loading…</string>
+
+    <!-- Bottom navigation (MainActivity) -->
+    <string name="nav_catalog">Catalog</string>
+    <string name="nav_collection">Collection</string>
+    <string name="nav_settings">Settings</string>
+
+    <!-- Catalog screens -->
+    <string name="catalog_title">Catalog</string>
+    <string name="catalog_search_country_placeholder">Search country (Italy, Russia...)...</string>
+    <string name="catalog_country_not_found">Country \"%1$s\" not found. It will be added soon!</string>
+    <string name="catalog_no_denominations_found">No denominations found</string>
+    <string name="catalog_specifications">Specifications</string>
+    <string name="catalog_composition">Composition: %1$s</string>
+    <string name="catalog_weight_diameter">Weight: %1$sg | Diameter: %2$smm</string>
+    <string name="catalog_rarity_scale">Rarity (Scale): %1$s</string>
+    <string name="catalog_rarity_label">Catalog Rarity: %1$s</string>
+    <string name="catalog_rarity_common">Common</string>
+    <string name="catalog_toast_added">Added!</string>
+    <string name="catalog_toast_error">Error: %1$s</string>
+    <string name="catalog_details_title">Details</string>
+    <string name="catalog_characteristics">Characteristics:</string>
+    <string name="catalog_label_denomination">Denomination</string>
+    <string name="catalog_label_metal">Metal</string>
+    <string name="catalog_label_year">Year</string>
+    <string name="catalog_label_rarity">Rarity</string>
+    <string name="catalog_label_series">Series</string>
+    <string name="catalog_label_rarity_code">Rarity Code</string>
+    <string name="catalog_label_mintage_spmd">Mintage (SPMD)</string>
+    <string name="catalog_label_mintage_mmd">Mintage (MMD)</string>
+    <string name="catalog_label_estimated_price">Estimated Price</string>
+    <string name="catalog_label_description">Description</string>
+    <string name="catalog_your_coin">Your Coin:</string>
+    <string name="catalog_notes_label">Notes</string>
+
+    <!-- Auth screens -->
+    <string name="auth_app_icon_description">App Icon</string>
+    <string name="auth_app_title">Coin Set</string>
+    <string name="auth_login_error_title">Login Error</string>
+    <string name="auth_error_username_required">Username is required</string>
+    <string name="auth_error_password_required">Password is required</string>
+    <string name="auth_label_username">Username</string>
+    <string name="auth_label_password">Password</string>
+    <string name="auth_action_login">Login</string>
+    <string name="auth_action_register_account">Register Account</string>
+    <string name="auth_register_error_title">Registration Error</string>
+    <string name="auth_error_username_min_length">Username must be at least 3 characters</string>
+    <string name="auth_error_email_invalid">Please enter a valid email address</string>
+    <string name="auth_error_password_min_length">Password must be at least 6 characters</string>
+    <string name="auth_create_account_title">Create Account</string>
+    <string name="auth_label_email">Email</string>
+    <string name="auth_action_register">Register</string>
+    <string name="auth_error_invalid_credentials">Invalid username or password</string>
+    <string name="auth_error_server">Server error: %1$d</string>
+    <string name="auth_error_connection">Connection error</string>
+    <string name="auth_error_username_email_taken">This username or email is already taken.</string>
+    <string name="auth_error_server_retry">Server error (%1$d). Please try again later.</string>
+    <string name="auth_error_connection_check_internet">Connection error. Check your internet.</string>
+
+    <!-- Settings & Premium screens -->
+    <string name="settings_profile_picture_description">Profile Picture</string>
+    <string name="settings_your_profile">Your Profile</string>
+    <string name="settings_email_label">Email: %1$s</string>
+    <string name="settings_account_status">Account Status</string>
+    <string name="settings_pro_active">PRO Version Active</string>
+    <string name="settings_free_version">Free Version</string>
+    <string name="settings_upgrade_to_pro">Upgrade to PRO</string>
+    <string name="settings_pro_features_label">PRO Features:</string>
+    <string name="settings_feature_notes">Add personal notes to coins</string>
+    <string name="settings_feature_photos">Upload photos of your coins</string>
+    <string name="settings_feature_value_estimation">Total collection value estimation</string>
+    <string name="settings_feature_priority_support">Priority support</string>
+    <string name="settings_sign_out">Sign Out</string>
+    <string name="settings_language">Language</string>
+    <string name="settings_language_dialog_title">Choose language</string>
+    <string name="settings_language_system_default">System Default</string>
+    <string name="lang_russian">Русский</string>
+    <string name="lang_english">English</string>
+    <string name="lang_hebrew">עברית</string>
+    <string name="settings_pro_subscription_title">PRO Subscription</string>
+    <string name="settings_coin_set_pro">Coin Set PRO</string>
+    <string name="settings_unlock_features">Unlock all features:</string>
+    <string name="settings_premium_feature_unlimited_notes">Unlimited notes for your collection</string>
+    <string name="settings_premium_feature_hq_photos">High-quality photo uploads</string>
+    <string name="settings_premium_feature_market_analysis">Market value analysis</string>
+    <string name="settings_premium_feature_priority_access">Priority access to new features</string>
+    <string name="settings_price_rub">Price: 499 RUB / One-time</string>
+    <string name="settings_pay_activate">Pay &amp; Activate</string>
+    <string name="settings_pro_activated_toast">Success! PRO Activated (Simulated).</string>
+    <string name="settings_payment_simulation_notice">This is a payment simulation for demonstration purposes</string>
+
+    <!-- Collection screens -->
+    <string name="collection_title">My Collection</string>
+    <string name="collection_stats">Collection Stats</string>
+    <string name="collection_total_coins">Total Coins:</string>
+    <string name="collection_total_coins_value">%1$d pcs.</string>
+    <string name="collection_total_purchase_value">Total Purchase Value:</string>
+    <string name="collection_total_purchase_value_rub">%1$s RUB</string>
+    <string name="collection_empty">Collection is empty</string>
+    <string name="collection_unknown_coin">Unknown Coin</string>
+    <string name="collection_note_prefix">Note: %1$s</string>
+    <string name="collection_price_rub">%1$s RUB</string>
 </resources>

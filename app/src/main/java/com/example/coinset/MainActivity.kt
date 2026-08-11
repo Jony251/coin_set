@@ -1,7 +1,7 @@
 package com.example.coinset
 
 import android.os.Bundle
-import androidx.activity.ComponentActivity
+import androidx.appcompat.app.AppCompatActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.padding
@@ -13,6 +13,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavController
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.*
@@ -29,7 +30,12 @@ import com.example.coinset.ui.theme.CoinSetTheme
  * Main Activity of the application.
  * Initializes TokenManager and sets up the root navigation.
  */
-class MainActivity : ComponentActivity() {
+/**
+ * AppCompatActivity (not plain ComponentActivity) because
+ * AppCompatDelegate.setApplicationLocales() silently no-ops without it - see
+ * res/values/themes.xml for the matching AppCompat-compatible theme change.
+ */
+class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
@@ -145,23 +151,23 @@ fun AppBottomBar(navController: NavController) {
             currentRoute?.startsWith("coin_detail") == true
 
         NavigationBarItem(
-            icon = { Icon(Icons.Default.Search, null) }, 
-            label = { Text("Catalog") }, 
-            selected = isCatalogActive, 
+            icon = { Icon(Icons.Default.Search, null) },
+            label = { Text(stringResource(R.string.nav_catalog)) },
+            selected = isCatalogActive,
             onClick = { navigateToTab(navController, "catalog_root") }
         )
-        
+
         NavigationBarItem(
-            icon = { Icon(Icons.Default.Favorite, null) }, 
-            label = { Text("Collection") }, 
-            selected = currentRoute == "my_collection", 
+            icon = { Icon(Icons.Default.Favorite, null) },
+            label = { Text(stringResource(R.string.nav_collection)) },
+            selected = currentRoute == "my_collection",
             onClick = { navigateToTab(navController, "my_collection") }
         )
-        
+
         NavigationBarItem(
-            icon = { Icon(Icons.Default.Settings, null) }, 
-            label = { Text("Settings") }, 
-            selected = currentRoute == "settings" || currentRoute == "premium", 
+            icon = { Icon(Icons.Default.Settings, null) },
+            label = { Text(stringResource(R.string.nav_settings)) },
+            selected = currentRoute == "settings" || currentRoute == "premium",
             onClick = { navigateToTab(navController, "settings") }
         )
     }

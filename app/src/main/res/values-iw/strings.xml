@@ -1,0 +1,113 @@
+<!-- Duplicate of values-he: java.util.Locale still normalizes "he" to the legacy
+     "iw" tag internally, and LocaleList ends up as [iw, en_US] even when the app
+     requests "he" via AppCompatDelegate - resource folder matching needs the
+     values-iw copy or it silently falls through to the default (English) strings. -->
+<resources>
+    <string name="app_name">coin set</string>
+
+    <!-- Common -->
+    <string name="common_ok">אישור</string>
+    <string name="common_save">שמור</string>
+    <string name="common_loading">טוען…</string>
+
+    <!-- Bottom navigation (MainActivity) -->
+    <string name="nav_catalog">קטלוג</string>
+    <string name="nav_collection">אוסף</string>
+    <string name="nav_settings">הגדרות</string>
+
+    <!-- Catalog screens -->
+    <string name="catalog_title">קטלוג</string>
+    <string name="catalog_search_country_placeholder">חיפוש מדינה (איטליה, רוסיה...)...</string>
+    <string name="catalog_country_not_found">המדינה \"%1$s\" לא נמצאה. היא תתווסף בקרוב!</string>
+    <string name="catalog_no_denominations_found">לא נמצאו ערכים נקובים</string>
+    <string name="catalog_specifications">מפרט</string>
+    <string name="catalog_composition">הרכב מתכת: %1$s</string>
+    <string name="catalog_weight_diameter">משקל: %1$s גרם | קוטר: %2$s מ\"מ</string>
+    <string name="catalog_rarity_scale">נדירות (בסולם): %1$s</string>
+    <string name="catalog_rarity_label">נדירות בקטלוג: %1$s</string>
+    <string name="catalog_rarity_common">רגיל</string>
+    <string name="catalog_toast_added">נוסף!</string>
+    <string name="catalog_toast_error">שגיאה: %1$s</string>
+    <string name="catalog_details_title">פרטים</string>
+    <string name="catalog_characteristics">מאפיינים:</string>
+    <string name="catalog_label_denomination">ערך נקוב</string>
+    <string name="catalog_label_metal">מתכת</string>
+    <string name="catalog_label_year">שנה</string>
+    <string name="catalog_label_rarity">נדירות</string>
+    <string name="catalog_label_series">סדרה</string>
+    <string name="catalog_label_rarity_code">קוד נדירות</string>
+    <string name="catalog_label_mintage_spmd">הטבעה (SPMD)</string>
+    <string name="catalog_label_mintage_mmd">הטבעה (MMD)</string>
+    <string name="catalog_label_estimated_price">מחיר משוער</string>
+    <string name="catalog_label_description">תיאור</string>
+    <string name="catalog_your_coin">המטבע שלך:</string>
+    <string name="catalog_notes_label">הערות</string>
+
+    <!-- Auth screens -->
+    <string name="auth_app_icon_description">סמל האפליקציה</string>
+    <string name="auth_app_title">Coin Set</string>
+    <string name="auth_login_error_title">שגיאת התחברות</string>
+    <string name="auth_error_username_required">יש להזין שם משתמש</string>
+    <string name="auth_error_password_required">יש להזין סיסמה</string>
+    <string name="auth_label_username">שם משתמש</string>
+    <string name="auth_label_password">סיסמה</string>
+    <string name="auth_action_login">התחברות</string>
+    <string name="auth_action_register_account">יצירת חשבון</string>
+    <string name="auth_register_error_title">שגיאת הרשמה</string>
+    <string name="auth_error_username_min_length">שם המשתמש חייב להכיל לפחות 3 תווים</string>
+    <string name="auth_error_email_invalid">יש להזין כתובת אימייל תקינה</string>
+    <string name="auth_error_password_min_length">הסיסמה חייבת להכיל לפחות 6 תווים</string>
+    <string name="auth_create_account_title">יצירת חשבון</string>
+    <string name="auth_label_email">אימייל</string>
+    <string name="auth_action_register">הרשמה</string>
+    <string name="auth_error_invalid_credentials">שם משתמש או סיסמה שגויים</string>
+    <string name="auth_error_server">שגיאת שרת: %1$d</string>
+    <string name="auth_error_connection">שגיאת חיבור</string>
+    <string name="auth_error_username_email_taken">שם המשתמש או האימייל כבר תפוסים.</string>
+    <string name="auth_error_server_retry">שגיאת שרת (%1$d). נסה שוב מאוחר יותר.</string>
+    <string name="auth_error_connection_check_internet">שגיאת חיבור. בדוק את החיבור לאינטרנט.</string>
+
+    <!-- Settings & Premium screens -->
+    <string name="settings_profile_picture_description">תמונת פרופיל</string>
+    <string name="settings_your_profile">הפרופיל שלך</string>
+    <string name="settings_email_label">אימייל: %1$s</string>
+    <string name="settings_account_status">סטטוס חשבון</string>
+    <string name="settings_pro_active">גרסת PRO פעילה</string>
+    <string name="settings_free_version">גרסה חינמית</string>
+    <string name="settings_upgrade_to_pro">שדרוג ל-PRO</string>
+    <string name="settings_pro_features_label">תכונות PRO:</string>
+    <string name="settings_feature_notes">הוספת הערות אישיות למטבעות</string>
+    <string name="settings_feature_photos">העלאת תמונות של המטבעות שלך</string>
+    <string name="settings_feature_value_estimation">הערכת שווי כולל של האוסף</string>
+    <string name="settings_feature_priority_support">תמיכה מועדפת</string>
+    <string name="settings_sign_out">התנתקות</string>
+    <string name="settings_language">שפה</string>
+    <string name="settings_language_dialog_title">בחר שפה</string>
+    <string name="settings_language_system_default">ברירת המחדל של המערכת</string>
+    <string name="lang_russian">Русский</string>
+    <string name="lang_english">English</string>
+    <string name="lang_hebrew">עברית</string>
+    <string name="settings_pro_subscription_title">מנוי PRO</string>
+    <string name="settings_coin_set_pro">Coin Set PRO</string>
+    <string name="settings_unlock_features">פתח את כל התכונות:</string>
+    <string name="settings_premium_feature_unlimited_notes">הערות ללא הגבלה לאוסף שלך</string>
+    <string name="settings_premium_feature_hq_photos">העלאת תמונות באיכות גבוהה</string>
+    <string name="settings_premium_feature_market_analysis">ניתוח שווי שוק</string>
+    <string name="settings_premium_feature_priority_access">גישה מועדפת לתכונות חדשות</string>
+    <string name="settings_price_rub">מחיר: 499 רובל / תשלום חד-פעמי</string>
+    <string name="settings_pay_activate">תשלום והפעלה</string>
+    <string name="settings_pro_activated_toast">בוצע! PRO הופעל (סימולציה).</string>
+    <string name="settings_payment_simulation_notice">זוהי סימולציית תשלום להדגמה בלבד</string>
+
+    <!-- Collection screens -->
+    <string name="collection_title">האוסף שלי</string>
+    <string name="collection_stats">סטטיסטיקת אוסף</string>
+    <string name="collection_total_coins">סה\"כ מטבעות:</string>
+    <string name="collection_total_coins_value">%1$d יח\'</string>
+    <string name="collection_total_purchase_value">שווי רכישה כולל:</string>
+    <string name="collection_total_purchase_value_rub">%1$s רובל</string>
+    <string name="collection_empty">האוסף ריק</string>
+    <string name="collection_unknown_coin">מטבע לא ידוע</string>
+    <string name="collection_note_prefix">הערה: %1$s</string>
+    <string name="collection_price_rub">%1$s רובל</string>
+</resources>
