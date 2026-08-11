@@ -60,6 +60,10 @@ data class CountryWithRulersAndCoins(
     val rulers: List<RulerWithCoins> = emptyList()
 )
 
+data class CountrySearchMissRequest(
+    @SerializedName("search_query") val searchQuery: String
+)
+
 data class RulerResponse(
     val id: Int,
     val name: String,

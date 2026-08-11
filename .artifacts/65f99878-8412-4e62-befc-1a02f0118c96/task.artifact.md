@@ -1,0 +1,6 @@
+- [ ] Update `RetrofitClient.kt` with the new BASE_URL
+- [ ] Migrate `AuthScreens.kt` (Login/Register) to the new API
+- [ ] Update `MainActivity.kt` to use Token-based authentication state
+- [ ] Migrate `CatalogScreens.kt` (CoinList, CoinType, CoinDetail) to `CatalogRepository`
+- [ ] Migrate `CollectionScreens.kt` (MyCollection) to `CollectionRepository`
+- [ ] Cleanup Firebase usages where appropriate

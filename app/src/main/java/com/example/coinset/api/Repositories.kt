@@ -68,6 +68,15 @@ class CatalogRepository(private val api: CoinsetApi = RetrofitClient.api) {
         }
     }
 
+    /** Fire-and-forget: records that a searched-for country isn't in the catalog. */
+    suspend fun logCountrySearchMiss(query: String) {
+        try {
+            api.logCountrySearchMiss(CountrySearchMissRequest(query))
+        } catch (e: Exception) {
+            // Best-effort telemetry — a failed log call shouldn't affect the UI.
+        }
+    }
+
     suspend fun getCoins(rulerId: Int? = null, metalType: String? = null): Result<List<CoinResponse>> {
         return try {
             val response = api.getCoins(rulerId = rulerId, metalType = metalType)

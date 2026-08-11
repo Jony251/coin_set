@@ -48,7 +48,10 @@ interface CoinsetApi {
         @Path("id") id: Int,
         @Query("include") include: String = "rulers.coins"
     ): CountryWithRulersAndCoins
-    
+
+    @POST("api/countries/search-log")
+    suspend fun logCountrySearchMiss(@Body request: CountrySearchMissRequest): Response<Unit>
+
     // Rulers
     @GET("api/rulers")
     suspend fun getRulers(

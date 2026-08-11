@@ -33,6 +33,7 @@ import coil.compose.AsyncImage
 import com.example.coinset.R
 import com.example.coinset.api.*
 import com.example.coinset.ui.components.InfoRow
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
@@ -58,7 +59,20 @@ fun CountryListScreen(navController: NavController) {
         it.name.contains(searchQuery, ignoreCase = true)
     }
 
-    Scaffold(topBar = { 
+    // Country search is client-side filtering over the already-fetched list (no
+    // server round trip per keystroke), so a miss needs its own report. Debounced
+    // so we log once per pause in typing, not on every character.
+    LaunchedEffect(searchQuery) {
+        if (searchQuery.isNotBlank() && countries.isNotEmpty()) {
+            delay(1000)
+            val stillMissing = countries.none { it.name.contains(searchQuery, ignoreCase = true) }
+            if (stillMissing) {
+                repository.logCountrySearchMiss(searchQuery)
+            }
+        }
+    }
+
+    Scaffold(topBar = {
         TopAppBar(
             title = { 
                 Row(verticalAlignment = Alignment.CenterVertically) {
