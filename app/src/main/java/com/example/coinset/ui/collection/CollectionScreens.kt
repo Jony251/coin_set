@@ -18,6 +18,7 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.coinset.R
 import com.example.coinset.api.CollectionRepository
+import com.example.coinset.api.RetrofitClient
 import com.example.coinset.api.UserCoinResponse
 import com.example.coinset.ui.components.SectionCard
 import com.example.coinset.ui.components.StatusBadge
@@ -122,7 +123,7 @@ fun CollectionItem(userCoin: UserCoinResponse, onClick: () -> Unit) {
             .clickable { onClick() }
     ) {
         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            val userPhoto = userCoin.images.firstOrNull()
+            val userPhoto = RetrofitClient.resolveImageUrl(userCoin.images.firstOrNull())
             if (!userPhoto.isNullOrEmpty()) {
                 AsyncImage(
                     model = userPhoto, 

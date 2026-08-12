@@ -66,6 +66,9 @@
     <string name="catalog_action_add_to_wishlist">Add to Wishlist</string>
     <string name="catalog_status_owned">In your collection</string>
     <string name="catalog_status_wishlist">On your wishlist</string>
+    <string name="catalog_vip_feature_message">This is a PRO feature</string>
+    <string name="catalog_upgrade_action">Upgrade</string>
+    <string name="catalog_save_failed">Something went wrong. Please try again.</string>
 
     <!-- Auth screens -->
     <string name="auth_app_icon_description">App Icon</string>

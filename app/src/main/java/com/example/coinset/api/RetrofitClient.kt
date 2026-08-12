@@ -12,6 +12,19 @@ object RetrofitClient {
 
     const val BASE_URL = "https://coinset.bluecat.cc/"
 
+    /**
+     * UserCoin.images / upload-image responses store a bare filename (the
+     * backend's save_image() returns just "uuid.jpg", not a URL) - it's
+     * served statically under /uploads/. Coin.image_url from the catalog
+     * (Numista-sourced) is already a full https:// URL, so pass those
+     * through unchanged.
+     */
+    fun resolveImageUrl(filenameOrUrl: String?): String? {
+        if (filenameOrUrl.isNullOrBlank()) return null
+        if (filenameOrUrl.startsWith("http://") || filenameOrUrl.startsWith("https://")) return filenameOrUrl
+        return BASE_URL + "uploads/" + filenameOrUrl
+    }
+
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY
     }

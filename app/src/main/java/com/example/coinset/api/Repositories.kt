@@ -130,6 +130,24 @@ class CollectionRepository(private val api: CoinsetApi = RetrofitClient.api) {
             Result.failure(e)
         }
     }
+
+    suspend fun uploadImage(userCoinId: Int, part: MultipartBody.Part): Result<UserCoinResponse> {
+        return try {
+            val response = api.uploadCoinImage(userCoinId, part)
+            Result.success(response)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun updateUserCoin(id: Int, update: UserCoinUpdate): Result<UserCoinResponse> {
+        return try {
+            val response = api.updateUserCoin(id, update)
+            Result.success(response)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }
 
 class NewsRepository(private val api: CoinsetApi = RetrofitClient.api) {

@@ -66,6 +66,9 @@
     <string name="catalog_action_add_to_wishlist">Добавить в список желаний</string>
     <string name="catalog_status_owned">В вашей коллекции</string>
     <string name="catalog_status_wishlist">В вашем списке желаний</string>
+    <string name="catalog_vip_feature_message">Это PRO-функция</string>
+    <string name="catalog_upgrade_action">Улучшить</string>
+    <string name="catalog_save_failed">Что-то пошло не так. Попробуйте ещё раз.</string>
 
     <!-- Auth screens -->
     <string name="auth_app_icon_description">Значок приложения</string>

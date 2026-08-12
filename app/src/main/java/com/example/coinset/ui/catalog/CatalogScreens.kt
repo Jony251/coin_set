@@ -1,5 +1,6 @@
 package com.example.coinset.ui.catalog
 
+import android.content.Context
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -39,8 +40,14 @@ import com.example.coinset.ui.components.LogoStyle
 import com.example.coinset.ui.components.SectionCard
 import com.example.coinset.ui.components.SectionCardEmphasis
 import com.example.coinset.ui.theme.Spacing
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.asRequestBody
+import java.io.File
 
 /**
  * The backend's metal_type/rarity fields are fixed enums always returned in
@@ -392,20 +399,53 @@ fun CoinDetailScreen(navController: NavController, coinId: String) {
     val repository = remember { CatalogRepository() }
     val collectionRepo = remember { CollectionRepository() }
     val authRepository = remember { AuthRepository() }
-    
+    val context = LocalContext.current
+
     var coin by remember { mutableStateOf<CoinResponse?>(null) }
     var userCoinData by remember { mutableStateOf<UserCoinResponse?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var isUploading by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
 
     var noteText by remember { mutableStateOf("") }
     var imageUrl by remember { mutableStateOf<String?>(null) }
 
+    val vipRequiredMsg = stringResource(R.string.catalog_vip_feature_message)
+    val upgradeActionLabel = stringResource(R.string.catalog_upgrade_action)
+    val saveFailedMsg = stringResource(R.string.catalog_save_failed)
+
+    suspend fun handleVipGate() {
+        val result = snackbarHostState.showSnackbar(
+            message = vipRequiredMsg,
+            actionLabel = upgradeActionLabel
+        )
+        if (result == SnackbarResult.ActionPerformed) {
+            navController.navigate("premium")
+        }
+    }
+
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-        uri?.let {
-            // TODO: Implement image upload via API if needed, for now we just have the placeholder
-            // In the new API, we have api.uploadCoinImage
+        uri?.let { pickedUri ->
+            val currentUserCoin = userCoinData ?: return@let
+            scope.launch {
+                isUploading = true
+                val part = withContext(Dispatchers.IO) { uriToMultipart(context, pickedUri) }
+                if (part == null) {
+                    isUploading = false
+                    snackbarHostState.showSnackbar(saveFailedMsg)
+                    return@launch
+                }
+                collectionRepo.uploadImage(currentUserCoin.id, part).onSuccess { updated ->
+                    userCoinData = updated
+                    imageUrl = RetrofitClient.resolveImageUrl(updated.images.firstOrNull())
+                    isUploading = false
+                }.onFailure { e ->
+                    isUploading = false
+                    if (e is retrofit2.HttpException && e.code() == 403) handleVipGate()
+                    else snackbarHostState.showSnackbar(saveFailedMsg)
+                }
+            }
         }
     }
 
@@ -421,7 +461,7 @@ fun CoinDetailScreen(navController: NavController, coinId: String) {
                         if (data != null) {
                             userCoinData = data
                             noteText = data.notes ?: ""
-                            imageUrl = data.images.firstOrNull()
+                            imageUrl = RetrofitClient.resolveImageUrl(data.images.firstOrNull())
                         }
                         isLoading = false
                     }.onFailure { isLoading = false }
@@ -432,7 +472,10 @@ fun CoinDetailScreen(navController: NavController, coinId: String) {
         }
     }
 
-    Scaffold(topBar = { TopAppBar(title = { Text(coin?.name ?: stringResource(R.string.catalog_details_title)) }, navigationIcon = { IconButton(onClick = { navController.popBackStack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) } }) }) { padding ->
+    Scaffold(
+        topBar = { TopAppBar(title = { Text(coin?.name ?: stringResource(R.string.catalog_details_title)) }, navigationIcon = { IconButton(onClick = { navController.popBackStack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) } }) },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
+    ) { padding ->
         if (isLoading) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
         else if (coin != null) {
             LazyColumn(modifier = Modifier.padding(padding).padding(16.dp)) {
@@ -467,8 +510,14 @@ fun CoinDetailScreen(navController: NavController, coinId: String) {
                                 Spacer(Modifier.height(16.dp))
                                 OutlinedTextField(value = noteText, onValueChange = { noteText = it }, label = { Text(stringResource(R.string.catalog_notes_label)) }, modifier = Modifier.fillMaxWidth())
                                 Button(onClick = {
+                                    val currentUserCoin = userCoinData ?: return@Button
                                     scope.launch {
-                                        // Update logic via API
+                                        collectionRepo.updateUserCoin(currentUserCoin.id, UserCoinUpdate(notes = noteText)).onSuccess { updated ->
+                                            userCoinData = updated
+                                        }.onFailure { e ->
+                                            if (e is retrofit2.HttpException && e.code() == 403) handleVipGate()
+                                            else snackbarHostState.showSnackbar(saveFailedMsg)
+                                        }
                                     }
                                 }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) { Text(stringResource(R.string.common_save)) }
                         }
@@ -500,4 +549,17 @@ fun CoinDetailScreen(navController: NavController, coinId: String) {
             }
         }
     }
+}
+
+/**
+ * Copies a picked content:// image into a cache file and wraps it as a
+ * multipart form part - upload-image endpoints need a real file, not a
+ * content Uri. Must be called off the main thread (file I/O).
+ */
+private fun uriToMultipart(context: Context, uri: Uri): MultipartBody.Part? {
+    val inputStream = context.contentResolver.openInputStream(uri) ?: return null
+    val file = File.createTempFile("upload", ".jpg", context.cacheDir)
+    inputStream.use { input -> file.outputStream().use { output -> input.copyTo(output) } }
+    val requestBody = file.asRequestBody("image/*".toMediaTypeOrNull())
+    return MultipartBody.Part.createFormData("file", file.name, requestBody)
 }

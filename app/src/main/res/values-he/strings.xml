@@ -66,6 +66,9 @@
     <string name="catalog_action_add_to_wishlist">הוספה לרשימת המשאלות</string>
     <string name="catalog_status_owned">באוסף שלך</string>
     <string name="catalog_status_wishlist">ברשימת המשאלות שלך</string>
+    <string name="catalog_vip_feature_message">זוהי תכונת PRO</string>
+    <string name="catalog_upgrade_action">שדרוג</string>
+    <string name="catalog_save_failed">משהו השתבש. נסה שוב.</string>
 
     <!-- Auth screens -->
     <string name="auth_app_icon_description">סמל האפליקציה</string>

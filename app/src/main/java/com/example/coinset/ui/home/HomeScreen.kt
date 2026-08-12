@@ -26,6 +26,7 @@ import com.example.coinset.R
 import com.example.coinset.api.CollectionRepository
 import com.example.coinset.api.NewsArticleResponse
 import com.example.coinset.api.NewsRepository
+import com.example.coinset.api.RetrofitClient
 import com.example.coinset.api.UserCoinResponse
 import com.example.coinset.ui.components.CoinSetLogo
 import com.example.coinset.ui.components.LogoStyle
@@ -159,7 +160,7 @@ private fun HomeCoinCard(userCoin: UserCoinResponse, onClick: () -> Unit) {
         modifier = Modifier.width(140.dp).clickable { onClick() }
     ) {
         Column {
-            val userPhoto = userCoin.images.firstOrNull()
+            val userPhoto = RetrofitClient.resolveImageUrl(userCoin.images.firstOrNull())
             Box(Modifier.fillMaxWidth().height(100.dp)) {
                 if (!userPhoto.isNullOrEmpty()) {
                     AsyncImage(
