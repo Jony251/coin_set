@@ -1,5 +1,6 @@
 <resources>
     <string name="app_name">coin set</string>
+    <string name="app_wordmark">Coin Set</string>
 
     <!-- Common -->
     <string name="common_ok">ОК</string>
@@ -10,6 +11,18 @@
     <string name="nav_catalog">Каталог</string>
     <string name="nav_collection">Коллекция</string>
     <string name="nav_settings">Настройки</string>
+    <string name="nav_home">Главная</string>
+
+    <!-- Home screen -->
+    <string name="home_title">Главная</string>
+    <string name="home_search_placeholder">Поиск любой монеты</string>
+    <string name="home_stories_banner_title">Узнайте, чем занимается сообщество</string>
+    <string name="home_stories_banner_subtitle">Загляните в каталог, чтобы увидеть монеты, которые добавляют другие коллекционеры.</string>
+    <string name="home_your_collection">Ваша коллекция</string>
+    <string name="home_your_wishlist">Ваш список желаний</string>
+    <string name="home_empty_collection_hint">Добавьте монеты, чтобы увидеть их здесь</string>
+    <string name="home_empty_wishlist_hint">Добавьте монеты в список желаний, чтобы увидеть их здесь</string>
+    <string name="home_news_title">Новости</string>
 
     <!-- Catalog screens -->
     <string name="catalog_title">Каталог</string>
@@ -49,6 +62,10 @@
     <string name="catalog_label_description">Описание</string>
     <string name="catalog_your_coin">Ваша монета:</string>
     <string name="catalog_notes_label">Заметки</string>
+    <string name="catalog_action_add_to_collection">Добавить в коллекцию</string>
+    <string name="catalog_action_add_to_wishlist">Добавить в список желаний</string>
+    <string name="catalog_status_owned">В вашей коллекции</string>
+    <string name="catalog_status_wishlist">В вашем списке желаний</string>
 
     <!-- Auth screens -->
     <string name="auth_app_icon_description">Значок приложения</string>
@@ -73,8 +90,11 @@
     <string name="auth_error_username_email_taken">Это имя пользователя или email уже заняты.</string>
     <string name="auth_error_server_retry">Ошибка сервера (%1$d). Попробуйте позже.</string>
     <string name="auth_error_connection_check_internet">Ошибка соединения. Проверьте подключение к интернету.</string>
+    <string name="auth_show_password">Показать пароль</string>
+    <string name="auth_hide_password">Скрыть пароль</string>
 
     <!-- Settings & Premium screens -->
+    <string name="settings_title">Настройки</string>
     <string name="settings_profile_picture_description">Фото профиля</string>
     <string name="settings_your_profile">Ваш профиль</string>
     <string name="settings_email_label">Email: %1$s</string>
@@ -114,6 +134,9 @@
     <string name="collection_total_purchase_value">Общая стоимость покупки:</string>
     <string name="collection_total_purchase_value_rub">%1$s руб.</string>
     <string name="collection_empty">Коллекция пуста</string>
+    <string name="collection_tab_my_collection">Моя коллекция</string>
+    <string name="collection_tab_wishlist">Список желаний</string>
+    <string name="collection_wishlist_empty">Список желаний пуст</string>
     <string name="collection_unknown_coin">Неизвестная монета</string>
     <string name="collection_note_prefix">Заметка: %1$s</string>
     <string name="collection_price_rub">%1$s руб.</string>

@@ -118,6 +118,7 @@ data class UserCoinResponse(
     @SerializedName("user_id") val userId: Int,
     @SerializedName("coin_id") val coinId: Int,
     val condition: String,
+    val status: String = "owned",
     @SerializedName("purchase_price") val purchasePrice: Double?,
     @SerializedName("purchase_date") val purchaseDate: String?,
     @SerializedName("selling_price") val sellingPrice: Double?,
@@ -137,6 +138,7 @@ data class UserCoinResponse(
 data class UserCoinCreate(
     @SerializedName("coin_id") val coinId: Int,
     val condition: String = "UNC",
+    val status: String = "owned",
     @SerializedName("purchase_price") val purchasePrice: Double? = null,
     @SerializedName("purchase_date") val purchaseDate: String? = null,
     val notes: String? = null,
@@ -145,6 +147,7 @@ data class UserCoinCreate(
 
 data class UserCoinUpdate(
     val condition: String? = null,
+    val status: String? = null,
     @SerializedName("purchase_price") val purchasePrice: Double? = null,
     @SerializedName("purchase_date") val purchaseDate: String? = null,
     @SerializedName("selling_price") val sellingPrice: Double? = null,
@@ -159,6 +162,17 @@ data class CollectionStats(
     @SerializedName("total_selling_value") val totalSellingValue: Double,
     @SerializedName("coins_by_condition") val coinsByCondition: Map<String, Int>,
     @SerializedName("coins_by_metal") val coinsByMetal: Map<String, Int>
+)
+
+// News Models
+data class NewsArticleResponse(
+    val id: Int,
+    val title: String,
+    val source: String,
+    val summary: String,
+    val url: String?,
+    @SerializedName("image_url") val imageUrl: String?,
+    @SerializedName("published_at") val publishedAt: String
 )
 
 // VIP Models

@@ -96,7 +96,8 @@ interface CoinsetApi {
     suspend fun getUserCoins(
         @Query("skip") skip: Int = 0,
         @Query("limit") limit: Int = 100,
-        @Query("condition") condition: String? = null
+        @Query("condition") condition: String? = null,
+        @Query("status") status: String? = null
     ): List<UserCoinResponse>
     
     @POST("api/user-coins")
@@ -121,6 +122,10 @@ interface CoinsetApi {
     @GET("api/user-coins/stats/summary")
     suspend fun getCollectionStats(): CollectionStats
     
+    // News
+    @GET("api/news")
+    suspend fun getNews(@Query("limit") limit: Int = 10): List<NewsArticleResponse>
+
     // VIP
     @GET("api/vip/status")
     suspend fun getVipStatus(): VipStatus

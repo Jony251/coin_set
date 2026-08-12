@@ -1,5 +1,6 @@
 <resources>
     <string name="app_name">coin set</string>
+    <string name="app_wordmark">Coin Set</string>
 
     <!-- Common -->
     <string name="common_ok">אישור</string>
@@ -10,6 +11,18 @@
     <string name="nav_catalog">קטלוג</string>
     <string name="nav_collection">אוסף</string>
     <string name="nav_settings">הגדרות</string>
+    <string name="nav_home">בית</string>
+
+    <!-- Home screen -->
+    <string name="home_title">בית</string>
+    <string name="home_search_placeholder">חיפוש כל מטבע</string>
+    <string name="home_stories_banner_title">גלו מה קורה בקהילה שלכם</string>
+    <string name="home_stories_banner_subtitle">עיינו בקטלוג כדי לגלות מטבעות שאספנים אחרים מוסיפים.</string>
+    <string name="home_your_collection">האוסף שלך</string>
+    <string name="home_your_wishlist">רשימת המשאלות שלך</string>
+    <string name="home_empty_collection_hint">הוסיפו מטבעות כדי לראות אותם כאן</string>
+    <string name="home_empty_wishlist_hint">הוסיפו מטבעות לרשימת המשאלות כדי לראות אותם כאן</string>
+    <string name="home_news_title">חדשות</string>
 
     <!-- Catalog screens -->
     <string name="catalog_title">קטלוג</string>
@@ -49,6 +62,10 @@
     <string name="catalog_label_description">תיאור</string>
     <string name="catalog_your_coin">המטבע שלך:</string>
     <string name="catalog_notes_label">הערות</string>
+    <string name="catalog_action_add_to_collection">הוספה לאוסף</string>
+    <string name="catalog_action_add_to_wishlist">הוספה לרשימת המשאלות</string>
+    <string name="catalog_status_owned">באוסף שלך</string>
+    <string name="catalog_status_wishlist">ברשימת המשאלות שלך</string>
 
     <!-- Auth screens -->
     <string name="auth_app_icon_description">סמל האפליקציה</string>
@@ -73,8 +90,11 @@
     <string name="auth_error_username_email_taken">שם המשתמש או האימייל כבר תפוסים.</string>
     <string name="auth_error_server_retry">שגיאת שרת (%1$d). נסה שוב מאוחר יותר.</string>
     <string name="auth_error_connection_check_internet">שגיאת חיבור. בדוק את החיבור לאינטרנט.</string>
+    <string name="auth_show_password">הצג סיסמה</string>
+    <string name="auth_hide_password">הסתר סיסמה</string>
 
     <!-- Settings & Premium screens -->
+    <string name="settings_title">הגדרות</string>
     <string name="settings_profile_picture_description">תמונת פרופיל</string>
     <string name="settings_your_profile">הפרופיל שלך</string>
     <string name="settings_email_label">אימייל: %1$s</string>
@@ -114,6 +134,9 @@
     <string name="collection_total_purchase_value">שווי רכישה כולל:</string>
     <string name="collection_total_purchase_value_rub">%1$s רובל</string>
     <string name="collection_empty">האוסף ריק</string>
+    <string name="collection_tab_my_collection">האוסף שלי</string>
+    <string name="collection_tab_wishlist">רשימת המשאלות</string>
+    <string name="collection_wishlist_empty">רשימת המשאלות ריקה</string>
     <string name="collection_unknown_coin">מטבע לא ידוע</string>
     <string name="collection_note_prefix">הערה: %1$s</string>
     <string name="collection_price_rub">%1$s רובל</string>

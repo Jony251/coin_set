@@ -33,7 +33,12 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.coinset.R
 import com.example.coinset.api.*
+import com.example.coinset.ui.components.CoinSetLogo
 import com.example.coinset.ui.components.InfoRow
+import com.example.coinset.ui.components.LogoStyle
+import com.example.coinset.ui.components.SectionCard
+import com.example.coinset.ui.components.SectionCardEmphasis
+import com.example.coinset.ui.theme.Spacing
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -101,13 +106,9 @@ fun CountryListScreen(navController: NavController) {
 
     Scaffold(topBar = {
         TopAppBar(
-            title = { 
+            title = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Image(
-                        painter = painterResource(id = R.drawable.icon), 
-                        contentDescription = null, 
-                        modifier = Modifier.size(32.dp).padding(end = 8.dp)
-                    )
+                    CoinSetLogo(style = LogoStyle.IconOnly, iconSize = 32.dp, modifier = Modifier.padding(end = Spacing.sm))
                     Text(stringResource(R.string.catalog_title))
                 }
             }
@@ -348,15 +349,13 @@ fun CoinTypeScreen(navController: NavController, rulerId: String, category: Stri
         else Column(Modifier.padding(padding)) {
             if (coins.isNotEmpty()) {
                 val first = coins[0]
-                Card(Modifier.fillMaxWidth().padding(8.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
-                    Column(Modifier.padding(16.dp)) {
+                SectionCard(Modifier.fillMaxWidth().padding(Spacing.sm)) {
                         Text(stringResource(R.string.catalog_specifications), fontWeight = FontWeight.Bold)
                         Text(stringResource(R.string.catalog_composition, localizedMetalType(first.metalType)))
                         Text(stringResource(R.string.catalog_weight_diameter, first.weight.toString(), first.diameter.toString()))
                         if (first.rarity.isNotEmpty()) {
                             Text(stringResource(R.string.catalog_rarity_scale, localizedRarity(first.rarity)), color = MaterialTheme.colorScheme.primary)
                         }
-                    }
                 }
             }
             LazyColumn(Modifier.weight(1f)) {
@@ -438,7 +437,7 @@ fun CoinDetailScreen(navController: NavController, coinId: String) {
         else if (coin != null) {
             LazyColumn(modifier = Modifier.padding(padding).padding(16.dp)) {
                 item {
-                    Text(stringResource(R.string.catalog_characteristics), fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                    Text(stringResource(R.string.catalog_characteristics), style = MaterialTheme.typography.titleLarge)
                     InfoRow(stringResource(R.string.catalog_label_denomination), coin!!.denomination ?: "")
                     InfoRow(stringResource(R.string.catalog_label_metal), localizedMetalType(coin!!.metalType))
                     InfoRow(stringResource(R.string.catalog_label_year), coin!!.year?.toString() ?: "")
@@ -455,10 +454,9 @@ fun CoinDetailScreen(navController: NavController, coinId: String) {
                 }
                 if (userCoinData != null) {
                     item {
-                        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f))) {
-                            Column(Modifier.padding(16.dp)) {
+                        SectionCard(emphasis = SectionCardEmphasis.Brand) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(stringResource(R.string.catalog_your_coin), fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                                    Text(stringResource(R.string.catalog_your_coin), style = MaterialTheme.typography.titleMedium)
                                     // if (!isUserPro) Icon(Icons.Default.Lock, null, Modifier.padding(start = 8.dp).size(18.dp))
                                 }
                                 Box(Modifier.fillMaxWidth().height(200.dp).clip(MaterialTheme.shapes.medium).clickable(true) { launcher.launch("image/*") }, contentAlignment = Alignment.Center) {
@@ -473,6 +471,28 @@ fun CoinDetailScreen(navController: NavController, coinId: String) {
                                         // Update logic via API
                                     }
                                 }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) { Text(stringResource(R.string.common_save)) }
+                        }
+                    }
+                } else {
+                    item {
+                        Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Button(onClick = {
+                                scope.launch {
+                                    collectionRepo.addCoinToCollection(coin!!.id, "UNC", status = "owned").onSuccess { userCoinData = it }
+                                }
+                            }, modifier = Modifier.weight(1f)) {
+                                Icon(Icons.Default.AddCircle, null)
+                                Spacer(Modifier.width(4.dp))
+                                Text(stringResource(R.string.catalog_action_add_to_collection))
+                            }
+                            OutlinedButton(onClick = {
+                                scope.launch {
+                                    collectionRepo.addCoinToCollection(coin!!.id, "UNC", status = "wishlist").onSuccess { userCoinData = it }
+                                }
+                            }, modifier = Modifier.weight(1f)) {
+                                Icon(Icons.Default.FavoriteBorder, null)
+                                Spacer(Modifier.width(4.dp))
+                                Text(stringResource(R.string.catalog_action_add_to_wishlist))
                             }
                         }
                     }

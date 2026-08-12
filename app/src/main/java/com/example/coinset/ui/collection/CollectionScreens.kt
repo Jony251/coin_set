@@ -9,18 +9,19 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.coinset.R
 import com.example.coinset.api.CollectionRepository
 import com.example.coinset.api.UserCoinResponse
+import com.example.coinset.ui.components.SectionCard
+import com.example.coinset.ui.components.StatusBadge
+import com.example.coinset.ui.theme.Spacing
 
 /**
  * Screen displaying the user's personal coin collection and statistics.
@@ -30,20 +31,28 @@ import com.example.coinset.api.UserCoinResponse
 fun MyCollectionScreen(navController: NavController) {
     val repository = remember { CollectionRepository() }
     val coinsWithDetails = remember { mutableStateListOf<UserCoinResponse>() }
+    var totalCoins by remember { mutableStateOf(0) }
     var totalPurchaseValue by remember { mutableStateOf(0.0) }
     var totalSellingValue by remember { mutableStateOf(0.0) }
     var isLoading by remember { mutableStateOf(true) }
+    var selectedTab by remember { mutableStateOf(0) }
 
-    // Fetch collection data on launch
+    // Stats always reflect owned coins only (backend filters status == "owned"),
+    // so they stay correct regardless of which tab is showing - fetched once here.
     LaunchedEffect(Unit) {
-        repository.getUserCoins().onSuccess { result ->
+        repository.getCollectionStats().onSuccess { stats ->
+            totalCoins = stats.totalCoins
+            totalPurchaseValue = stats.totalPurchaseValue
+            totalSellingValue = stats.totalSellingValue
+        }
+    }
+
+    LaunchedEffect(selectedTab) {
+        isLoading = true
+        val status = if (selectedTab == 0) "owned" else "wishlist"
+        repository.getUserCoins(status = status).onSuccess { result ->
             coinsWithDetails.clear()
             coinsWithDetails.addAll(result)
-            
-            repository.getCollectionStats().onSuccess { stats ->
-                totalPurchaseValue = stats.totalPurchaseValue
-                totalSellingValue = stats.totalSellingValue
-            }
             isLoading = false
         }.onFailure { isLoading = false }
     }
@@ -51,21 +60,11 @@ fun MyCollectionScreen(navController: NavController) {
     Scaffold(
         topBar = { TopAppBar(title = { Text(stringResource(R.string.collection_title)) }) }
     ) { padding ->
-        if (isLoading) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-        } else {
-            // Calculate collection statistics
-            val totalCoins = coinsWithDetails.size
-
-            Column(Modifier.padding(padding).fillMaxSize()) {
+        Column(Modifier.padding(padding).fillMaxSize()) {
                 // Statistics Card
-                Card(
-                    modifier = Modifier.fillMaxWidth().padding(8.dp), 
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
-                ) {
-                    Column(Modifier.padding(16.dp)) {
+                SectionCard(modifier = Modifier.fillMaxWidth().padding(Spacing.sm)) {
                         Text(stringResource(R.string.collection_stats), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-                        Spacer(Modifier.height(8.dp))
+                        Spacer(Modifier.height(Spacing.sm))
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                             Text(stringResource(R.string.collection_total_coins))
                             Text(stringResource(R.string.collection_total_coins_value, totalCoins), fontWeight = FontWeight.Bold)
@@ -74,11 +73,30 @@ fun MyCollectionScreen(navController: NavController) {
                             Text(stringResource(R.string.collection_total_purchase_value))
                             Text(stringResource(R.string.collection_total_purchase_value_rub, totalPurchaseValue.toString()), fontWeight = FontWeight.Bold)
                         }
-                    }
                 }
 
-                if (coinsWithDetails.isEmpty()) {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(stringResource(R.string.collection_empty)) }
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = Spacing.sm, vertical = Spacing.xs),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
+                ) {
+                    FilterChip(
+                        selected = selectedTab == 0,
+                        onClick = { selectedTab = 0 },
+                        label = { Text(stringResource(R.string.collection_tab_my_collection)) }
+                    )
+                    FilterChip(
+                        selected = selectedTab == 1,
+                        onClick = { selectedTab = 1 },
+                        label = { Text(stringResource(R.string.collection_tab_wishlist)) }
+                    )
+                }
+
+                if (isLoading) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+                } else if (coinsWithDetails.isEmpty()) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(stringResource(if (selectedTab == 0) R.string.collection_empty else R.string.collection_wishlist_empty))
+                    }
                 } else {
                     LazyColumn(Modifier.weight(1f)) {
                         items(coinsWithDetails) { userCoin ->
@@ -89,7 +107,6 @@ fun MyCollectionScreen(navController: NavController) {
                     }
                 }
             }
-        }
     }
 }
 
@@ -124,16 +141,8 @@ fun CollectionItem(userCoin: UserCoinResponse, onClick: () -> Unit) {
                         maxLines = 1, 
                         overflow = TextOverflow.Ellipsis
                     )
-                    Surface(
-                        color = MaterialTheme.colorScheme.primary, 
-                        shape = MaterialTheme.shapes.small
-                    ) {
-                        Text(
-                            text = userCoin.condition, 
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp), 
-                            color = Color.White, 
-                            fontSize = 12.sp
-                        )
+                    if (userCoin.status != "wishlist") {
+                        StatusBadge(text = userCoin.condition)
                     }
                 }
                 val note = userCoin.notes ?: ""

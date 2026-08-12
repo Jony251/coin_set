@@ -1,10 +1,14 @@
 package com.example.coinset.ui.settings
 
 import android.widget.Toast
-import androidx.compose.foundation.Image
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
@@ -14,11 +18,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.appcompat.app.AppCompatDelegate
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -29,11 +29,37 @@ import com.example.coinset.api.AuthRepository
 import com.example.coinset.api.TokenManager
 import com.example.coinset.api.UserResponse
 import com.example.coinset.ui.components.BulletItem
+import com.example.coinset.ui.components.CollectorAvatar
+import com.example.coinset.ui.components.SectionCard
+import com.example.coinset.ui.theme.Dimens
+import com.example.coinset.ui.theme.Spacing
 import kotlinx.coroutines.launch
+
+/**
+ * A pulsing placeholder for a line of text that hasn't loaded yet - replaces
+ * literally rendering the word "Loading..." inline.
+ */
+@Composable
+private fun LoadingSkeleton(modifier: Modifier = Modifier) {
+    val transition = rememberInfiniteTransition(label = "skeleton")
+    val alpha by transition.animateFloat(
+        initialValue = 0.3f,
+        targetValue = 0.6f,
+        animationSpec = infiniteRepeatable(animation = tween(700), repeatMode = RepeatMode.Reverse),
+        label = "skeletonAlpha"
+    )
+    Box(
+        modifier = modifier.background(
+            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = alpha),
+            MaterialTheme.shapes.extraSmall
+        )
+    )
+}
 
 /**
  * Screen for user settings and account status.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(navController: NavController, rootNavController: NavController) {
     val authRepository = remember { AuthRepository() }
@@ -45,37 +71,38 @@ fun SettingsScreen(navController: NavController, rootNavController: NavControlle
         authRepository.getCurrentUser().onSuccess { result ->
             user = result
             isLoading = false
-        }.onFailure { 
-            isLoading = false 
+        }.onFailure {
+            isLoading = false
         }
     }
 
     val isPro = user?.isAdmin ?: false
     var showLanguageDialog by remember { mutableStateOf(false) }
 
-    Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        // Profile Image
-        Image(
-            painter = painterResource(id = R.drawable.icon),
-            contentDescription = stringResource(R.string.settings_profile_picture_description),
-            modifier = Modifier.size(120.dp).clip(CircleShape),
-            contentScale = ContentScale.Fit
-        )
-        Spacer(Modifier.height(16.dp))
-        Text(text = stringResource(R.string.settings_your_profile), style = MaterialTheme.typography.headlineMedium)
-        Text(
-            text = stringResource(R.string.settings_email_label, user?.email ?: stringResource(R.string.common_loading)),
-            color = MaterialTheme.colorScheme.secondary
-        )
+    Scaffold(
+        topBar = { TopAppBar(title = { Text(stringResource(R.string.settings_title)) }) }
+    ) { padding ->
+        Column(
+            modifier = Modifier.fillMaxSize().padding(padding).padding(Spacing.lg),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            CollectorAvatar(displayName = user?.email, size = Dimens.avatarLarge)
+            Spacer(Modifier.height(Spacing.lg))
+            Text(text = stringResource(R.string.settings_your_profile), style = MaterialTheme.typography.headlineMedium)
+            if (isLoading) {
+                Spacer(Modifier.height(4.dp))
+                LoadingSkeleton(modifier = Modifier.width(180.dp).height(16.dp))
+            } else {
+                Text(
+                    text = stringResource(R.string.settings_email_label, user?.email ?: ""),
+                    color = MaterialTheme.colorScheme.secondary
+                )
+            }
 
-        Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(Spacing.xxl))
 
-        // Account Status Card
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(16.dp)) {
+            // Account Status Card
+            SectionCard(modifier = Modifier.fillMaxWidth()) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -90,63 +117,66 @@ fun SettingsScreen(navController: NavController, rootNavController: NavControlle
                             Text(stringResource(R.string.settings_upgrade_to_pro))
                         }
                     } else if (isPro) {
-                        Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color.Green)
+                        Icon(Icons.Default.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.tertiary)
                     }
                 }
 
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(Spacing.lg))
                 HorizontalDivider()
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(Spacing.lg))
 
                 // Feature List
                 Text(text = stringResource(R.string.settings_pro_features_label), style = MaterialTheme.typography.labelLarge)
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(Spacing.sm))
                 BulletItem(stringResource(R.string.settings_feature_notes), isActive = isPro)
                 BulletItem(stringResource(R.string.settings_feature_photos), isActive = isPro)
                 BulletItem(stringResource(R.string.settings_feature_value_estimation), isActive = isPro)
                 BulletItem(stringResource(R.string.settings_feature_priority_support), isActive = isPro)
             }
-        }
 
-        Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(Spacing.lg))
 
-        // Language Selector Card
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(16.dp).clickable { showLanguageDialog = true },
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+            // Language Selector Card
+            SectionCard(
+                modifier = Modifier.fillMaxWidth(),
+                contentPadding = PaddingValues(0.dp)
             ) {
-                Text(text = stringResource(R.string.settings_language), fontWeight = FontWeight.Bold)
-                TextButton(onClick = { showLanguageDialog = true }) {
-                    Text(currentLanguageLabel())
-                }
-            }
-        }
-
-        if (showLanguageDialog) {
-            LanguagePickerDialog(onDismiss = { showLanguageDialog = false })
-        }
-
-        Spacer(Modifier.weight(1f))
-
-        // Sign Out Button
-        Button(
-            onClick = {
-                scope.launch {
-                    TokenManager.clearTokens()
-                    rootNavController.navigate("login") {
-                        popUpTo(0) { inclusive = true }
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(Spacing.lg).clickable { showLanguageDialog = true },
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(text = stringResource(R.string.settings_language), fontWeight = FontWeight.Bold)
+                    TextButton(onClick = { showLanguageDialog = true }) {
+                        Text(currentLanguageLabel())
                     }
                 }
-            },
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.errorContainer,
-                contentColor = MaterialTheme.colorScheme.onErrorContainer
-            )
-        ) {
-            Text(stringResource(R.string.settings_sign_out))
+            }
+
+            if (showLanguageDialog) {
+                LanguagePickerDialog(onDismiss = { showLanguageDialog = false })
+            }
+
+            Spacer(Modifier.weight(1f))
+
+            // Sign Out Button
+            Button(
+                onClick = {
+                    scope.launch {
+                        TokenManager.clearTokens()
+                        rootNavController.navigate("login") {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                    contentColor = MaterialTheme.colorScheme.onErrorContainer
+                )
+            ) {
+                Text(stringResource(R.string.settings_sign_out))
+            }
         }
     }
 }
@@ -232,7 +262,7 @@ fun PremiumScreen(navController: NavController) {
         }
     ) { padding ->
         Column(
-            modifier = Modifier.padding(padding).padding(24.dp).fillMaxSize(),
+            modifier = Modifier.padding(padding).padding(Spacing.xxl).fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Icon(
@@ -241,16 +271,16 @@ fun PremiumScreen(navController: NavController) {
                 modifier = Modifier.size(80.dp),
                 tint = MaterialTheme.colorScheme.primary
             )
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(Spacing.lg))
             Text(
                 text = stringResource(R.string.settings_coin_set_pro),
                 style = MaterialTheme.typography.headlineLarge,
                 fontWeight = FontWeight.Bold
             )
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(Spacing.xxl))
 
             Text(stringResource(R.string.settings_unlock_features), fontWeight = FontWeight.Bold, modifier = Modifier.fillMaxWidth())
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(Spacing.sm))
             BulletItem(stringResource(R.string.settings_premium_feature_unlimited_notes))
             BulletItem(stringResource(R.string.settings_premium_feature_hq_photos))
             BulletItem(stringResource(R.string.settings_premium_feature_market_analysis))
@@ -259,33 +289,34 @@ fun PremiumScreen(navController: NavController) {
             Spacer(Modifier.weight(1f))
 
             Text(stringResource(R.string.settings_price_rub), style = MaterialTheme.typography.titleLarge)
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(Spacing.lg))
 
-            if (isProcessing) {
-                CircularProgressIndicator()
-            } else {
-                Button(
-                    onClick = {
-                        isProcessing = true
-                        scope.launch {
-                            // Simulation: Wait for 2 seconds and succeed
-                            kotlinx.coroutines.delay(2000)
-                            isProcessing = false
-                            Toast.makeText(context, proActivatedToast, Toast.LENGTH_LONG).show()
-                            navController.popBackStack()
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth().height(56.dp)
-                ) {
+            Button(
+                onClick = {
+                    isProcessing = true
+                    scope.launch {
+                        // Simulation: Wait for 2 seconds and succeed
+                        kotlinx.coroutines.delay(2000)
+                        isProcessing = false
+                        Toast.makeText(context, proActivatedToast, Toast.LENGTH_LONG).show()
+                        navController.popBackStack()
+                    }
+                },
+                enabled = !isProcessing,
+                modifier = Modifier.fillMaxWidth().height(Dimens.primaryButtonHeight)
+            ) {
+                if (isProcessing) {
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
+                } else {
                     Text(stringResource(R.string.settings_pay_activate))
                 }
             }
 
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(Spacing.sm))
             Text(
                 text = stringResource(R.string.settings_payment_simulation_notice),
                 style = MaterialTheme.typography.bodySmall,
-                color = Color.Gray
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }

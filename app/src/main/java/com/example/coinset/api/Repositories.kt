@@ -97,21 +97,22 @@ class CatalogRepository(private val api: CoinsetApi = RetrofitClient.api) {
 }
 
 class CollectionRepository(private val api: CoinsetApi = RetrofitClient.api) {
-    
-    suspend fun getUserCoins(): Result<List<UserCoinResponse>> {
+
+    suspend fun getUserCoins(status: String? = null): Result<List<UserCoinResponse>> {
         return try {
-            val response = api.getUserCoins()
+            val response = api.getUserCoins(status = status)
             Result.success(response)
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
-    
-    suspend fun addCoinToCollection(coinId: Int, condition: String, price: Double? = null): Result<UserCoinResponse> {
+
+    suspend fun addCoinToCollection(coinId: Int, condition: String, price: Double? = null, status: String = "owned"): Result<UserCoinResponse> {
         return try {
             val request = UserCoinCreate(
                 coinId = coinId,
                 condition = condition,
+                status = status,
                 purchasePrice = price
             )
             val response = api.addUserCoin(request)
@@ -120,10 +121,22 @@ class CollectionRepository(private val api: CoinsetApi = RetrofitClient.api) {
             Result.failure(e)
         }
     }
-    
+
     suspend fun getCollectionStats(): Result<CollectionStats> {
         return try {
             val response = api.getCollectionStats()
+            Result.success(response)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+}
+
+class NewsRepository(private val api: CoinsetApi = RetrofitClient.api) {
+
+    suspend fun getNews(limit: Int = 10): Result<List<NewsArticleResponse>> {
+        return try {
+            val response = api.getNews(limit)
             Result.success(response)
         } catch (e: Exception) {
             Result.failure(e)
