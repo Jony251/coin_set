@@ -9,6 +9,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AddCircle
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -108,14 +110,18 @@ fun HomeScreen(navController: NavController) {
                     title = stringResource(R.string.home_your_collection),
                     coins = myCoins,
                     emptyHint = stringResource(R.string.home_empty_collection_hint),
-                    onCoinClick = { navController.navigate("coin_detail/${it.coinId}") }
+                    emptyIcon = Icons.Default.AddCircle,
+                    onCoinClick = { navController.navigate("coin_detail/${it.coinId}") },
+                    onExploreCatalog = { navController.navigate("catalog_root") }
                 )
 
                 HomeCarousel(
                     title = stringResource(R.string.home_your_wishlist),
                     coins = wishlist,
                     emptyHint = stringResource(R.string.home_empty_wishlist_hint),
-                    onCoinClick = { navController.navigate("coin_detail/${it.coinId}") }
+                    emptyIcon = Icons.Default.FavoriteBorder,
+                    onCoinClick = { navController.navigate("coin_detail/${it.coinId}") },
+                    onExploreCatalog = { navController.navigate("catalog_root") }
                 )
 
                 NewsSection(news)
@@ -131,18 +137,35 @@ private fun HomeCarousel(
     title: String,
     coins: List<UserCoinResponse>,
     emptyHint: String,
-    onCoinClick: (UserCoinResponse) -> Unit
+    emptyIcon: androidx.compose.ui.graphics.vector.ImageVector,
+    onCoinClick: (UserCoinResponse) -> Unit,
+    onExploreCatalog: () -> Unit
 ) {
     Column(Modifier.padding(top = 16.dp)) {
         Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 16.dp))
         Spacer(Modifier.height(8.dp))
         if (coins.isEmpty()) {
-            Text(
-                emptyHint,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.secondary,
-                modifier = Modifier.padding(horizontal = 16.dp)
-            )
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Icon(
+                    emptyIcon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier.size(28.dp)
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    emptyHint,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.secondary,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+                TextButton(onClick = onExploreCatalog) {
+                    Text(stringResource(R.string.catalog_title))
+                }
+            }
         } else {
             LazyRow(
                 contentPadding = PaddingValues(horizontal = 16.dp),

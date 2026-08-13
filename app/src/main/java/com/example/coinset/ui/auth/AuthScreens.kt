@@ -311,6 +311,10 @@ fun RegisterScreen(navController: NavController) {
                     Text(stringResource(R.string.auth_action_register))
                 }
             }
+
+            TextButton(onClick = { navController.navigate("login") }) {
+                Text(stringResource(R.string.auth_action_go_to_login))
+            }
         }
     }
 }

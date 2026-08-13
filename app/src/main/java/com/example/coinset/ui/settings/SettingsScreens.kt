@@ -1,6 +1,5 @@
 package com.example.coinset.ui.settings
 
-import android.widget.Toast
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -18,7 +17,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.appcompat.app.AppCompatDelegate
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -28,6 +26,7 @@ import com.example.coinset.R
 import com.example.coinset.api.AuthRepository
 import com.example.coinset.api.TokenManager
 import com.example.coinset.api.UserResponse
+import com.example.coinset.api.VipRepository
 import com.example.coinset.ui.components.BulletItem
 import com.example.coinset.ui.components.CollectorAvatar
 import com.example.coinset.ui.components.SectionCard
@@ -63,7 +62,9 @@ private fun LoadingSkeleton(modifier: Modifier = Modifier) {
 @Composable
 fun SettingsScreen(navController: NavController, rootNavController: NavController) {
     val authRepository = remember { AuthRepository() }
+    val vipRepository = remember { VipRepository() }
     var user by remember { mutableStateOf<UserResponse?>(null) }
+    var isPro by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(true) }
     val scope = rememberCoroutineScope()
 
@@ -74,9 +75,11 @@ fun SettingsScreen(navController: NavController, rootNavController: NavControlle
         }.onFailure {
             isLoading = false
         }
+        vipRepository.getStatus().onSuccess { status ->
+            isPro = status.isVip
+        }
     }
 
-    val isPro = user?.isAdmin ?: false
     var showLanguageDialog by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -128,10 +131,10 @@ fun SettingsScreen(navController: NavController, rootNavController: NavControlle
                 // Feature List
                 Text(text = stringResource(R.string.settings_pro_features_label), style = MaterialTheme.typography.labelLarge)
                 Spacer(Modifier.height(Spacing.sm))
-                BulletItem(stringResource(R.string.settings_feature_notes), isActive = isPro)
-                BulletItem(stringResource(R.string.settings_feature_photos), isActive = isPro)
-                BulletItem(stringResource(R.string.settings_feature_value_estimation), isActive = isPro)
-                BulletItem(stringResource(R.string.settings_feature_priority_support), isActive = isPro)
+                BulletItem(stringResource(R.string.pro_feature_notes), isActive = isPro)
+                BulletItem(stringResource(R.string.pro_feature_photos), isActive = isPro)
+                BulletItem(stringResource(R.string.pro_feature_value_estimation), isActive = isPro)
+                BulletItem(stringResource(R.string.pro_feature_priority_support), isActive = isPro)
             }
 
             Spacer(Modifier.height(Spacing.lg))
@@ -243,11 +246,12 @@ private fun LanguagePickerDialog(onDismiss: () -> Unit) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PremiumScreen(navController: NavController) {
-    val context = LocalContext.current
+    val vipRepository = remember { VipRepository() }
     var isProcessing by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
 
-    val proActivatedToast = stringResource(R.string.settings_pro_activated_toast)
+    val activationFailedMsg = stringResource(R.string.settings_activation_failed)
 
     Scaffold(
         topBar = {
@@ -259,7 +263,8 @@ fun PremiumScreen(navController: NavController) {
                     }
                 }
             )
-        }
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
         Column(
             modifier = Modifier.padding(padding).padding(Spacing.xxl).fillMaxSize(),
@@ -279,12 +284,29 @@ fun PremiumScreen(navController: NavController) {
             )
             Spacer(Modifier.height(Spacing.xxl))
 
+            // Free vs PRO contrast: same four features, shown once muted (what you
+            // have now) and once highlighted (what unlocking adds) - reads as an
+            // upgrade rather than a flat feature list.
+            Text(
+                stringResource(R.string.pro_comparison_free_label),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(Modifier.height(Spacing.xs))
+            BulletItem(stringResource(R.string.pro_feature_notes), isActive = false)
+            BulletItem(stringResource(R.string.pro_feature_photos), isActive = false)
+            BulletItem(stringResource(R.string.pro_feature_value_estimation), isActive = false)
+            BulletItem(stringResource(R.string.pro_feature_priority_support), isActive = false)
+
+            Spacer(Modifier.height(Spacing.lg))
+
             Text(stringResource(R.string.settings_unlock_features), fontWeight = FontWeight.Bold, modifier = Modifier.fillMaxWidth())
             Spacer(Modifier.height(Spacing.sm))
-            BulletItem(stringResource(R.string.settings_premium_feature_unlimited_notes))
-            BulletItem(stringResource(R.string.settings_premium_feature_hq_photos))
-            BulletItem(stringResource(R.string.settings_premium_feature_market_analysis))
-            BulletItem(stringResource(R.string.settings_premium_feature_priority_access))
+            BulletItem(stringResource(R.string.pro_feature_notes))
+            BulletItem(stringResource(R.string.pro_feature_photos))
+            BulletItem(stringResource(R.string.pro_feature_value_estimation))
+            BulletItem(stringResource(R.string.pro_feature_priority_support))
 
             Spacer(Modifier.weight(1f))
 
@@ -295,11 +317,13 @@ fun PremiumScreen(navController: NavController) {
                 onClick = {
                     isProcessing = true
                     scope.launch {
-                        // Simulation: Wait for 2 seconds and succeed
-                        kotlinx.coroutines.delay(2000)
-                        isProcessing = false
-                        Toast.makeText(context, proActivatedToast, Toast.LENGTH_LONG).show()
-                        navController.popBackStack()
+                        vipRepository.activate().onSuccess {
+                            isProcessing = false
+                            navController.popBackStack()
+                        }.onFailure {
+                            isProcessing = false
+                            snackbarHostState.showSnackbar(activationFailedMsg)
+                        }
                     }
                 },
                 enabled = !isProcessing,

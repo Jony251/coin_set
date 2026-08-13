@@ -17,6 +17,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -64,6 +65,21 @@ private fun localizedMetalType(metalType: String): String = when (metalType.lowe
     "bronze" -> stringResource(R.string.metal_bronze)
     "brass" -> stringResource(R.string.metal_brass)
     else -> stringResource(R.string.metal_other)
+}
+
+// Catalog category browsing uses stable English keys ("gold"/"silver"/"copper"/
+// "trial") in routes and matching logic - never the localized label - so
+// switching the app language in Settings can't silently break which coins
+// show up under a category. Only the displayed text is localized.
+private val CATALOG_CATEGORY_KEYS = listOf("gold", "silver", "copper", "trial")
+
+@Composable
+private fun categoryDisplayName(categoryKey: String): String = when (categoryKey) {
+    "gold" -> stringResource(R.string.metal_gold)
+    "silver" -> stringResource(R.string.metal_silver)
+    "copper" -> stringResource(R.string.metal_copper)
+    "trial" -> stringResource(R.string.catalog_category_trial)
+    else -> categoryKey
 }
 
 @Composable
@@ -153,7 +169,7 @@ fun CountryListScreen(navController: NavController) {
                         ListItem(
                             headlineContent = { Text(country.name, fontWeight = FontWeight.Medium) }, 
                             supportingContent = { Text(country.code) },
-                            leadingContent = { Text("🚩", fontSize = 24.sp) }, 
+                            leadingContent = { Text("🇷🇺", fontSize = 24.sp) },
                             modifier = Modifier.clickable { 
                                 navController.navigate("rulers/${country.id}/${country.name}") 
                             }
@@ -229,21 +245,20 @@ fun RulerListScreen(navController: NavController, countryId: String, countryName
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CategoryListScreen(navController: NavController, rulerId: String, rulerName: String) {
-    val categories = listOf("Золото", "Серебро", "Медь", "Пробные")
     Scaffold(
-        topBar = { 
+        topBar = {
             TopAppBar(
-                title = { Text(rulerName) }, 
+                title = { Text(rulerName) },
                 navigationIcon = { IconButton(onClick = { navController.popBackStack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) } }
-            ) 
+            )
         }
     ) { padding ->
         LazyColumn(modifier = Modifier.padding(padding)) {
-            items(categories) { category ->
+            items(CATALOG_CATEGORY_KEYS) { categoryKey ->
                 ListItem(
-                    headlineContent = { Text(category) }, 
+                    headlineContent = { Text(categoryDisplayName(categoryKey)) },
                     trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) },
-                    modifier = Modifier.clickable { navController.navigate("coins/$rulerId/$category") }
+                    modifier = Modifier.clickable { navController.navigate("coins/$rulerId/$categoryKey") }
                 )
             }
         }
@@ -260,22 +275,18 @@ fun CoinListScreen(navController: NavController, rulerId: String, category: Stri
     LaunchedEffect(rulerId, category) {
         val rId = rulerId.toIntOrNull()
         if (rId != null) {
-            // In the new API, we might need a different way to filter by composition/category if not provided by backend.
-            // For now, let's assume we fetch coins and filter locally as before if the API doesn't support category query directly.
-            // Actually getCoins supports ruler_id.
             repository.getCoins(rulerId = rId).onSuccess { result ->
                 val set = mutableSetOf<String>()
                 for (coin in result) {
-                    val cat = category.lowercase()
                     val m = (coin.metalType ?: "").lowercase()
-                    val coinCat = (coin.description ?: "").lowercase() // Description might contain category info in some APIs, or metalType
+                    val matches = when (category) {
+                        "gold" -> m == "gold"
+                        "silver" -> m == "silver"
+                        "copper" -> m == "copper" || m == "bronze"
+                        else -> false
+                    }
 
-                    val matches = m.contains(cat) || coinCat.contains(cat) ||
-                            (cat == "серебро" && m.contains("silver")) ||
-                            (cat == "золото" && m.contains("gold")) ||
-                            (cat == "медь" && (m.contains("copper") || m.contains("bronze")))
-
-                    if (cat == "пробные" || matches) {
+                    if (category == "trial" || matches) {
                         set.add(coin.denomination ?: coin.name)
                     }
                 }
@@ -288,11 +299,11 @@ fun CoinListScreen(navController: NavController, rulerId: String, category: Stri
         }
     }
 
-    Scaffold(topBar = { 
+    Scaffold(topBar = {
         TopAppBar(
-            title = { Text(category) }, 
+            title = { Text(categoryDisplayName(category)) },
             navigationIcon = { IconButton(onClick = { navController.popBackStack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) } }
-        ) 
+        )
     }) { padding ->
         if (isLoading) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
         else if (denominations.isEmpty()) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(stringResource(R.string.catalog_no_denominations_found)) }
@@ -327,15 +338,15 @@ fun CoinTypeScreen(navController: NavController, rulerId: String, category: Stri
                     val currentDenomination = coin.denomination ?: coin.name
                     
                     if (currentDenomination == denomination) {
-                        val cat = category.lowercase()
                         val m = coin.metalType.lowercase()
-                        val coinCat = (coin.description ?: "").lowercase()
-                        val matches = m.contains(cat) || coinCat.contains(cat) ||
-                                      (cat == "серебро" && m.contains("silver")) ||
-                                      (cat == "золото" && m.contains("gold")) ||
-                                      (cat == "медь" && (m.contains("copper") || m.contains("bronze")))
-                        
-                        if (cat == "пробные" || matches) coins.add(coin)
+                        val matches = when (category) {
+                            "gold" -> m == "gold"
+                            "silver" -> m == "silver"
+                            "copper" -> m == "copper" || m == "bronze"
+                            else -> false
+                        }
+
+                        if (category == "trial" || matches) coins.add(coin)
                     }
                 }
                 coins.sortBy { it.year }
@@ -408,7 +419,9 @@ fun CoinDetailScreen(navController: NavController, coinId: String) {
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    var noteText by remember { mutableStateOf("") }
+    // rememberSaveable so an in-progress note survives an Activity recreation
+    // (e.g. screen rotation) instead of being silently wiped.
+    var noteText by rememberSaveable { mutableStateOf("") }
     var imageUrl by remember { mutableStateOf<String?>(null) }
 
     val vipRequiredMsg = stringResource(R.string.catalog_vip_feature_message)
@@ -527,7 +540,9 @@ fun CoinDetailScreen(navController: NavController, coinId: String) {
                         Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Button(onClick = {
                                 scope.launch {
-                                    collectionRepo.addCoinToCollection(coin!!.id, "UNC", status = "owned").onSuccess { userCoinData = it }
+                                    collectionRepo.addCoinToCollection(coin!!.id, "UNC", status = "owned")
+                                        .onSuccess { userCoinData = it }
+                                        .onFailure { snackbarHostState.showSnackbar(saveFailedMsg) }
                                 }
                             }, modifier = Modifier.weight(1f)) {
                                 Icon(Icons.Default.AddCircle, null)
@@ -536,7 +551,9 @@ fun CoinDetailScreen(navController: NavController, coinId: String) {
                             }
                             OutlinedButton(onClick = {
                                 scope.launch {
-                                    collectionRepo.addCoinToCollection(coin!!.id, "UNC", status = "wishlist").onSuccess { userCoinData = it }
+                                    collectionRepo.addCoinToCollection(coin!!.id, "UNC", status = "wishlist")
+                                        .onSuccess { userCoinData = it }
+                                        .onFailure { snackbarHostState.showSnackbar(saveFailedMsg) }
                                 }
                             }, modifier = Modifier.weight(1f)) {
                                 Icon(Icons.Default.FavoriteBorder, null)

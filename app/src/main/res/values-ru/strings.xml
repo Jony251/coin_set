@@ -17,7 +17,7 @@
     <string name="home_title">Главная</string>
     <string name="home_search_placeholder">Поиск любой монеты</string>
     <string name="home_stories_banner_title">Узнайте, чем занимается сообщество</string>
-    <string name="home_stories_banner_subtitle">Загляните в каталог, чтобы увидеть монеты, которые добавляют другие коллекционеры.</string>
+    <string name="home_stories_banner_subtitle">Загляните в каталог, чтобы найти монеты, достойные коллекции.</string>
     <string name="home_your_collection">Ваша коллекция</string>
     <string name="home_your_wishlist">Ваш список желаний</string>
     <string name="home_empty_collection_hint">Добавьте монеты, чтобы увидеть их здесь</string>
@@ -41,6 +41,7 @@
     <string name="metal_bronze">Бронза</string>
     <string name="metal_brass">Латунь</string>
     <string name="metal_other">Другое</string>
+    <string name="catalog_category_trial">Пробные</string>
     <string name="rarity_common">Обычная</string>
     <string name="rarity_uncommon">Нечастая</string>
     <string name="rarity_rare">Редкая</string>
@@ -87,6 +88,7 @@
     <string name="auth_create_account_title">Создать аккаунт</string>
     <string name="auth_label_email">Электронная почта</string>
     <string name="auth_action_register">Зарегистрироваться</string>
+    <string name="auth_action_go_to_login">Уже есть аккаунт? Войти</string>
     <string name="auth_error_invalid_credentials">Неверное имя пользователя или пароль</string>
     <string name="auth_error_server">Ошибка сервера: %1$d</string>
     <string name="auth_error_connection">Ошибка соединения</string>
@@ -106,10 +108,6 @@
     <string name="settings_free_version">Бесплатная версия</string>
     <string name="settings_upgrade_to_pro">Перейти на PRO</string>
     <string name="settings_pro_features_label">Возможности PRO:</string>
-    <string name="settings_feature_notes">Личные заметки к монетам</string>
-    <string name="settings_feature_photos">Загрузка фото ваших монет</string>
-    <string name="settings_feature_value_estimation">Оценка общей стоимости коллекции</string>
-    <string name="settings_feature_priority_support">Приоритетная поддержка</string>
     <string name="settings_sign_out">Выйти</string>
     <string name="settings_language">Язык</string>
     <string name="settings_language_dialog_title">Выберите язык</string>
@@ -117,17 +115,18 @@
     <string name="lang_russian">Русский</string>
     <string name="lang_english">English</string>
     <string name="lang_hebrew">עברית</string>
-    <string name="settings_pro_subscription_title">Подписка PRO</string>
+    <string name="settings_pro_subscription_title">Coin Set PRO</string>
     <string name="settings_coin_set_pro">Coin Set PRO</string>
     <string name="settings_unlock_features">Откройте все возможности:</string>
-    <string name="settings_premium_feature_unlimited_notes">Неограниченные заметки к коллекции</string>
-    <string name="settings_premium_feature_hq_photos">Загрузка фото в высоком качестве</string>
-    <string name="settings_premium_feature_market_analysis">Анализ рыночной стоимости</string>
-    <string name="settings_premium_feature_priority_access">Приоритетный доступ к новым функциям</string>
+    <string name="pro_feature_notes">Неограниченные заметки к коллекции</string>
+    <string name="pro_feature_photos">Загрузка фото в высоком качестве</string>
+    <string name="pro_feature_value_estimation">Анализ рыночной стоимости</string>
+    <string name="pro_feature_priority_support">Приоритетный доступ к новым функциям</string>
     <string name="settings_price_rub">Цена: 499 руб. / разовый платёж</string>
     <string name="settings_pay_activate">Оплатить и активировать</string>
-    <string name="settings_pro_activated_toast">Готово! PRO активирован (симуляция).</string>
-    <string name="settings_payment_simulation_notice">Это демонстрационная симуляция оплаты</string>
+    <string name="pro_comparison_free_label">Бесплатно</string>
+    <string name="settings_activation_failed">Не удалось активировать PRO. Попробуйте ещё раз.</string>
+    <string name="settings_payment_simulation_notice">Активация PRO здесь не списывает реальную оплату</string>
 
     <!-- Collection screens -->
     <string name="collection_title">Моя коллекция</string>

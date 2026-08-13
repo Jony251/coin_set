@@ -17,7 +17,7 @@
     <string name="home_title">Home</string>
     <string name="home_search_placeholder">Search any coin</string>
     <string name="home_stories_banner_title">See what your community is up to</string>
-    <string name="home_stories_banner_subtitle">Browse the catalog to discover coins other collectors are adding.</string>
+    <string name="home_stories_banner_subtitle">Browse the catalog to discover coins worth collecting.</string>
     <string name="home_your_collection">Your Collection</string>
     <string name="home_your_wishlist">Your Wishlist</string>
     <string name="home_empty_collection_hint">Add coins to see them here</string>
@@ -41,6 +41,7 @@
     <string name="metal_bronze">Bronze</string>
     <string name="metal_brass">Brass</string>
     <string name="metal_other">Other</string>
+    <string name="catalog_category_trial">Trial</string>
     <string name="rarity_common">Common</string>
     <string name="rarity_uncommon">Uncommon</string>
     <string name="rarity_rare">Rare</string>
@@ -87,6 +88,7 @@
     <string name="auth_create_account_title">Create Account</string>
     <string name="auth_label_email">Email</string>
     <string name="auth_action_register">Register</string>
+    <string name="auth_action_go_to_login">Already have an account? Log in</string>
     <string name="auth_error_invalid_credentials">Invalid username or password</string>
     <string name="auth_error_server">Server error: %1$d</string>
     <string name="auth_error_connection">Connection error</string>
@@ -106,10 +108,6 @@
     <string name="settings_free_version">Free Version</string>
     <string name="settings_upgrade_to_pro">Upgrade to PRO</string>
     <string name="settings_pro_features_label">PRO Features:</string>
-    <string name="settings_feature_notes">Add personal notes to coins</string>
-    <string name="settings_feature_photos">Upload photos of your coins</string>
-    <string name="settings_feature_value_estimation">Total collection value estimation</string>
-    <string name="settings_feature_priority_support">Priority support</string>
     <string name="settings_sign_out">Sign Out</string>
     <string name="settings_language">Language</string>
     <string name="settings_language_dialog_title">Choose language</string>
@@ -117,17 +115,18 @@
     <string name="lang_russian">Русский</string>
     <string name="lang_english">English</string>
     <string name="lang_hebrew">עברית</string>
-    <string name="settings_pro_subscription_title">PRO Subscription</string>
+    <string name="settings_pro_subscription_title">Coin Set PRO</string>
     <string name="settings_coin_set_pro">Coin Set PRO</string>
     <string name="settings_unlock_features">Unlock all features:</string>
-    <string name="settings_premium_feature_unlimited_notes">Unlimited notes for your collection</string>
-    <string name="settings_premium_feature_hq_photos">High-quality photo uploads</string>
-    <string name="settings_premium_feature_market_analysis">Market value analysis</string>
-    <string name="settings_premium_feature_priority_access">Priority access to new features</string>
+    <string name="pro_feature_notes">Unlimited notes for your collection</string>
+    <string name="pro_feature_photos">High-quality photo uploads</string>
+    <string name="pro_feature_value_estimation">Market value analysis</string>
+    <string name="pro_feature_priority_support">Priority access to new features</string>
     <string name="settings_price_rub">Price: 499 RUB / One-time</string>
     <string name="settings_pay_activate">Pay &amp; Activate</string>
-    <string name="settings_pro_activated_toast">Success! PRO Activated (Simulated).</string>
-    <string name="settings_payment_simulation_notice">This is a payment simulation for demonstration purposes</string>
+    <string name="pro_comparison_free_label">Free</string>
+    <string name="settings_activation_failed">Couldn\'t activate PRO. Please try again.</string>
+    <string name="settings_payment_simulation_notice">Activating PRO here doesn\'t charge a real payment yet</string>
 
     <!-- Collection screens -->
     <string name="collection_title">My Collection</string>

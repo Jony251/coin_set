@@ -4,6 +4,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AddCircle
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -96,7 +99,19 @@ fun MyCollectionScreen(navController: NavController) {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
                 } else if (coinsWithDetails.isEmpty()) {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text(stringResource(if (selectedTab == 0) R.string.collection_empty else R.string.collection_wishlist_empty))
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                if (selectedTab == 0) Icons.Default.AddCircle else Icons.Default.FavoriteBorder,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.secondary,
+                                modifier = Modifier.size(40.dp)
+                            )
+                            Spacer(Modifier.height(Spacing.xs))
+                            Text(stringResource(if (selectedTab == 0) R.string.collection_empty else R.string.collection_wishlist_empty))
+                            TextButton(onClick = { navController.navigate("catalog_root") }) {
+                                Text(stringResource(R.string.catalog_title))
+                            }
+                        }
                     }
                 } else {
                     LazyColumn(Modifier.weight(1f)) {

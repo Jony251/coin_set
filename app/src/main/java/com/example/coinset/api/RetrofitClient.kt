@@ -1,6 +1,7 @@
 package com.example.coinset.api
 
 import androidx.appcompat.app.AppCompatDelegate
+import com.example.coinset.BuildConfig
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -25,8 +26,11 @@ object RetrofitClient {
         return BASE_URL + "uploads/" + filenameOrUrl
     }
 
+    // BODY logs full request/response payloads - including the password field
+    // on /api/auth/login and the tokens on /api/auth/refresh - to logcat.
+    // Never enable that outside a debug build.
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
-        level = HttpLoggingInterceptor.Level.BODY
+        level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BODY else HttpLoggingInterceptor.Level.NONE
     }
 
     private val authInterceptor = Interceptor { chain ->

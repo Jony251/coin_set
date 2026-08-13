@@ -21,7 +21,7 @@
     <string name="home_title">בית</string>
     <string name="home_search_placeholder">חיפוש כל מטבע</string>
     <string name="home_stories_banner_title">גלו מה קורה בקהילה שלכם</string>
-    <string name="home_stories_banner_subtitle">עיינו בקטלוג כדי לגלות מטבעות שאספנים אחרים מוסיפים.</string>
+    <string name="home_stories_banner_subtitle">עיינו בקטלוג כדי לגלות מטבעות ששווה לאסוף.</string>
     <string name="home_your_collection">האוסף שלך</string>
     <string name="home_your_wishlist">רשימת המשאלות שלך</string>
     <string name="home_empty_collection_hint">הוסיפו מטבעות כדי לראות אותם כאן</string>
@@ -45,6 +45,7 @@
     <string name="metal_bronze">ברונזה</string>
     <string name="metal_brass">פליז</string>
     <string name="metal_other">אחר</string>
+    <string name="catalog_category_trial">ניסיוני</string>
     <string name="rarity_common">נפוץ</string>
     <string name="rarity_uncommon">לא נפוץ</string>
     <string name="rarity_rare">נדיר</string>
@@ -91,6 +92,7 @@
     <string name="auth_create_account_title">יצירת חשבון</string>
     <string name="auth_label_email">אימייל</string>
     <string name="auth_action_register">הרשמה</string>
+    <string name="auth_action_go_to_login">כבר יש לך חשבון? התחבר</string>
     <string name="auth_error_invalid_credentials">שם משתמש או סיסמה שגויים</string>
     <string name="auth_error_server">שגיאת שרת: %1$d</string>
     <string name="auth_error_connection">שגיאת חיבור</string>
@@ -110,10 +112,6 @@
     <string name="settings_free_version">גרסה חינמית</string>
     <string name="settings_upgrade_to_pro">שדרוג ל-PRO</string>
     <string name="settings_pro_features_label">תכונות PRO:</string>
-    <string name="settings_feature_notes">הוספת הערות אישיות למטבעות</string>
-    <string name="settings_feature_photos">העלאת תמונות של המטבעות שלך</string>
-    <string name="settings_feature_value_estimation">הערכת שווי כולל של האוסף</string>
-    <string name="settings_feature_priority_support">תמיכה מועדפת</string>
     <string name="settings_sign_out">התנתקות</string>
     <string name="settings_language">שפה</string>
     <string name="settings_language_dialog_title">בחר שפה</string>
@@ -121,17 +119,18 @@
     <string name="lang_russian">Русский</string>
     <string name="lang_english">English</string>
     <string name="lang_hebrew">עברית</string>
-    <string name="settings_pro_subscription_title">מנוי PRO</string>
+    <string name="settings_pro_subscription_title">Coin Set PRO</string>
     <string name="settings_coin_set_pro">Coin Set PRO</string>
     <string name="settings_unlock_features">פתח את כל התכונות:</string>
-    <string name="settings_premium_feature_unlimited_notes">הערות ללא הגבלה לאוסף שלך</string>
-    <string name="settings_premium_feature_hq_photos">העלאת תמונות באיכות גבוהה</string>
-    <string name="settings_premium_feature_market_analysis">ניתוח שווי שוק</string>
-    <string name="settings_premium_feature_priority_access">גישה מועדפת לתכונות חדשות</string>
+    <string name="pro_feature_notes">הערות ללא הגבלה לאוסף שלך</string>
+    <string name="pro_feature_photos">העלאת תמונות באיכות גבוהה</string>
+    <string name="pro_feature_value_estimation">ניתוח שווי שוק</string>
+    <string name="pro_feature_priority_support">גישה מועדפת לתכונות חדשות</string>
     <string name="settings_price_rub">מחיר: 499 רובל / תשלום חד-פעמי</string>
     <string name="settings_pay_activate">תשלום והפעלה</string>
-    <string name="settings_pro_activated_toast">בוצע! PRO הופעל (סימולציה).</string>
-    <string name="settings_payment_simulation_notice">זוהי סימולציית תשלום להדגמה בלבד</string>
+    <string name="pro_comparison_free_label">חינם</string>
+    <string name="settings_activation_failed">לא ניתן היה להפעיל PRO. נסה שוב.</string>
+    <string name="settings_payment_simulation_notice">הפעלת PRO כאן אינה מחייבת תשלום אמיתי</string>
 
     <!-- Collection screens -->
     <string name="collection_title">האוסף שלי</string>

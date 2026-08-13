@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.IndicationNodeFactory
 import androidx.compose.foundation.LocalIndication
+import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.InteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.offset
@@ -246,12 +247,15 @@ fun AppBottomBar(navController: NavController) {
         // Purely decorative raised circle over the invisible camera slot,
         // matching the Vivino reference look. No clickable modifier - the
         // NavigationBarItem beneath it already handles (and no-ops) the tap.
+        // A faint outline (no fill) marks it as a deliberate reserved slot
+        // rather than a render glitch, while keeping the icon itself hidden.
         Surface(
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .offset(y = Dimens.bottomNavRaisedCircleOffset)
                 .size(Dimens.bottomNavRaisedCircle)
-                .clip(CircleShape),
+                .clip(CircleShape)
+                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape),
             color = MaterialTheme.colorScheme.surfaceContainer
         ) {}
     }

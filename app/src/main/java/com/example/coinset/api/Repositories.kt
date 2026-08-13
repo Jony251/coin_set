@@ -161,3 +161,22 @@ class NewsRepository(private val api: CoinsetApi = RetrofitClient.api) {
         }
     }
 }
+
+class VipRepository(private val api: CoinsetApi = RetrofitClient.api) {
+
+    suspend fun getStatus(): Result<VipStatus> {
+        return try {
+            Result.success(api.getVipStatus())
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun activate(): Result<VipStatus> {
+        return try {
+            Result.success(api.activateVip(VipActivateRequest()))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+}
