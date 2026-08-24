@@ -37,26 +37,25 @@ interface CoinsetApi {
         @Query("include") include: String? = null
     ): CountryResponse
     
-    @GET("api/countries/{id}")
-    suspend fun getCountryWithRulers(
-        @Path("id") id: Int,
-        @Query("include") include: String = "rulers"
-    ): CountryWithRulers
-    
-    @GET("api/countries/{id}")
-    suspend fun getCountryWithRulersAndCoins(
-        @Path("id") id: Int,
-        @Query("include") include: String = "rulers.coins"
-    ): CountryWithRulersAndCoins
-
     @POST("api/countries/search-log")
     suspend fun logCountrySearchMiss(@Body request: CountrySearchMissRequest): Response<Unit>
+
+    // Periods
+    @GET("api/periods")
+    suspend fun getPeriods(@Query("country_id") countryId: Int): List<PeriodResponse>
+
+    @GET("api/periods/{id}")
+    suspend fun getPeriodWithRulers(
+        @Path("id") id: Int,
+        @Query("include") include: String = "rulers"
+    ): PeriodWithRulers
 
     // Rulers
     @GET("api/rulers")
     suspend fun getRulers(
         @Query("skip") skip: Int = 0,
         @Query("limit") limit: Int = 100,
+        @Query("period_id") periodId: Int? = null,
         @Query("country_id") countryId: Int? = null,
         @Query("period_start") periodStart: Int? = null,
         @Query("period_end") periodEnd: Int? = null,

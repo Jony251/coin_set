@@ -15,6 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -164,6 +165,28 @@ fun CollectorAvatar(
                 )
             }
         }
+    }
+}
+
+/**
+ * Real per-country flag, computed from an ISO 3166-1 alpha-2 code (e.g. "RU")
+ * as Unicode regional-indicator symbols - no icon library/assets needed, and
+ * it works for any future country automatically as long as its `code` is a
+ * genuine ISO alpha-2 code. Rendered flag emoji has been supported by
+ * Android's system emoji font since Lollipop. Falls back to a neutral globe
+ * glyph for a code that isn't a valid 2-letter ISO code (bad/legacy data).
+ */
+private fun flagEmoji(isoAlpha2: String): String {
+    val code = isoAlpha2.trim().uppercase()
+    if (code.length != 2 || code.any { it !in 'A'..'Z' }) return "🌐"
+    val base = 0x1F1E6 // regional indicator symbol letter A
+    return code.map { String(Character.toChars(base + (it - 'A'))) }.joinToString("")
+}
+
+@Composable
+fun CountryFlag(code: String, modifier: Modifier = Modifier, size: Dp = 28.dp) {
+    Box(modifier = modifier.size(size), contentAlignment = Alignment.Center) {
+        Text(text = flagEmoji(code), fontSize = with(LocalDensity.current) { (size * 0.85f).toSp() })
     }
 }
 

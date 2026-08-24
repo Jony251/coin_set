@@ -50,9 +50,18 @@ class CatalogRepository(private val api: CoinsetApi = RetrofitClient.api) {
         }
     }
     
-    suspend fun getCountryWithRulers(id: Int): Result<CountryWithRulers> {
+    suspend fun getPeriods(countryId: Int): Result<List<PeriodResponse>> {
         return try {
-            val response = api.getCountryWithRulers(id)
+            val response = api.getPeriods(countryId)
+            Result.success(response)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getPeriodWithRulers(id: Int): Result<PeriodWithRulers> {
+        return try {
+            val response = api.getPeriodWithRulers(id)
             Result.success(response)
         } catch (e: Exception) {
             Result.failure(e)

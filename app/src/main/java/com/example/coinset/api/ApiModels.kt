@@ -39,39 +39,50 @@ data class CountryResponse(
     val code: String,
     val description: String?,
     @SerializedName("created_at") val createdAt: String,
-    @SerializedName("rulers_count") val rulersCount: Int = 0
-)
-
-data class CountryWithRulers(
-    val id: Int,
-    val name: String,
-    val code: String,
-    val description: String?,
-    @SerializedName("created_at") val createdAt: String,
-    val rulers: List<RulerResponse> = emptyList()
-)
-
-data class CountryWithRulersAndCoins(
-    val id: Int,
-    val name: String,
-    val code: String,
-    val description: String?,
-    @SerializedName("created_at") val createdAt: String,
-    val rulers: List<RulerWithCoins> = emptyList()
+    @SerializedName("periods_count") val periodsCount: Int = 0
 )
 
 data class CountrySearchMissRequest(
     @SerializedName("search_query") val searchQuery: String
 )
 
+data class PeriodResponse(
+    val id: Int,
+    @SerializedName("country_id") val countryId: Int,
+    val name: String,
+    val code: String,
+    @SerializedName("period_start") val periodStart: Int,
+    @SerializedName("period_end") val periodEnd: Int?,
+    val description: String?,
+    @SerializedName("created_at") val createdAt: String,
+    @SerializedName("country_name") val countryName: String?,
+    @SerializedName("rulers_count") val rulersCount: Int = 0
+)
+
+data class PeriodWithRulers(
+    val id: Int,
+    @SerializedName("country_id") val countryId: Int,
+    val name: String,
+    val code: String,
+    @SerializedName("period_start") val periodStart: Int,
+    @SerializedName("period_end") val periodEnd: Int?,
+    val description: String?,
+    @SerializedName("created_at") val createdAt: String,
+    @SerializedName("country_name") val countryName: String?,
+    @SerializedName("rulers_count") val rulersCount: Int = 0,
+    val rulers: List<RulerResponse> = emptyList()
+)
+
 data class RulerResponse(
     val id: Int,
     val name: String,
-    @SerializedName("country_id") val countryId: Int,
+    @SerializedName("period_id") val periodId: Int,
     @SerializedName("period_start") val periodStart: Int,
     @SerializedName("period_end") val periodEnd: Int,
     val description: String?,
     @SerializedName("created_at") val createdAt: String,
+    @SerializedName("period_name") val periodName: String?,
+    @SerializedName("country_id") val countryId: Int?,
     @SerializedName("country_name") val countryName: String?,
     @SerializedName("coins_count") val coinsCount: Int = 0
 )
@@ -79,11 +90,13 @@ data class RulerResponse(
 data class RulerWithCoins(
     val id: Int,
     val name: String,
-    @SerializedName("country_id") val countryId: Int,
+    @SerializedName("period_id") val periodId: Int,
     @SerializedName("period_start") val periodStart: Int,
     @SerializedName("period_end") val periodEnd: Int,
     val description: String?,
     @SerializedName("created_at") val createdAt: String,
+    @SerializedName("period_name") val periodName: String?,
+    @SerializedName("country_id") val countryId: Int?,
     @SerializedName("country_name") val countryName: String?,
     @SerializedName("coins_count") val coinsCount: Int = 0,
     val coins: List<CoinResponse> = emptyList()

@@ -36,6 +36,7 @@ import coil.compose.AsyncImage
 import com.example.coinset.R
 import com.example.coinset.api.*
 import com.example.coinset.ui.components.CoinSetLogo
+import com.example.coinset.ui.components.CountryFlag
 import com.example.coinset.ui.components.InfoRow
 import com.example.coinset.ui.components.LogoStyle
 import com.example.coinset.ui.components.SectionCard
@@ -167,11 +168,11 @@ fun CountryListScreen(navController: NavController) {
                 LazyColumn {
                     items(filteredCountries) { country ->
                         ListItem(
-                            headlineContent = { Text(country.name, fontWeight = FontWeight.Medium) }, 
+                            headlineContent = { Text(country.name, fontWeight = FontWeight.Medium) },
                             supportingContent = { Text(country.code) },
-                            leadingContent = { Text("🇷🇺", fontSize = 24.sp) },
-                            modifier = Modifier.clickable { 
-                                navController.navigate("rulers/${country.id}/${country.name}") 
+                            leadingContent = { CountryFlag(code = country.code) },
+                            modifier = Modifier.clickable {
+                                navController.navigate("periods/${country.id}/${country.name}")
                             }
                         )
                     }
@@ -182,19 +183,91 @@ fun CountryListScreen(navController: NavController) {
 }
 
 /**
- * Modern Ruler List Screen with dynamic collection support (rulers_countryId).
+ * Period picker between Country and Ruler - lets a country span multiple
+ * historical eras (e.g. Russia: Empire / USSR / Federation) without those
+ * eras being modeled as separate top-level countries. A country with only
+ * one period skips straight to its rulers instead of showing a 1-item list.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RulerListScreen(navController: NavController, countryId: String, countryName: String) {
+fun PeriodListScreen(navController: NavController, countryId: String, countryName: String) {
     val repository = remember { CatalogRepository() }
-    val rulers = remember { mutableStateListOf<RulerResponse>() }
+    val periods = remember { mutableStateListOf<PeriodResponse>() }
     var isLoading by remember { mutableStateOf(true) }
 
     LaunchedEffect(countryId) {
         val id = countryId.toIntOrNull()
         if (id != null) {
-            repository.getCountryWithRulers(id).onSuccess { result ->
+            repository.getPeriods(id).onSuccess { result ->
+                if (result.size == 1) {
+                    val only = result[0]
+                    navController.navigate("rulers/${only.id}/${only.name}") {
+                        popUpTo("periods/$countryId/$countryName") { inclusive = true }
+                    }
+                    return@onSuccess
+                }
+                periods.clear()
+                periods.addAll(result)
+                isLoading = false
+            }.onFailure { isLoading = false }
+        } else {
+            isLoading = false
+        }
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(countryName) },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, null)
+                    }
+                }
+            )
+        }
+    ) { padding ->
+        if (isLoading) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+        } else {
+            LazyColumn(modifier = Modifier.padding(padding)) {
+                items(periods) { period ->
+                    Card(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
+                            .clickable { navController.navigate("rulers/${period.id}/${period.name}") }
+                    ) {
+                        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Surface(Modifier.size(60.dp), shape = CircleShape, color = MaterialTheme.colorScheme.surfaceVariant) {
+                                Icon(Icons.Default.History, null, Modifier.padding(12.dp))
+                            }
+                            Spacer(Modifier.width(16.dp))
+                            Column {
+                                Text(period.name, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                                val endLabel = period.periodEnd?.toString() ?: ""
+                                Text("${period.periodStart} - $endLabel", color = MaterialTheme.colorScheme.secondary)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Lists the rulers within one historical period.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun RulerListScreen(navController: NavController, periodId: String, periodName: String) {
+    val repository = remember { CatalogRepository() }
+    val rulers = remember { mutableStateListOf<RulerResponse>() }
+    var isLoading by remember { mutableStateOf(true) }
+
+    LaunchedEffect(periodId) {
+        val id = periodId.toIntOrNull()
+        if (id != null) {
+            repository.getPeriodWithRulers(id).onSuccess { result ->
                 rulers.clear()
                 rulers.addAll(result.rulers)
                 isLoading = false
@@ -205,15 +278,15 @@ fun RulerListScreen(navController: NavController, countryId: String, countryName
     }
 
     Scaffold(
-        topBar = { 
+        topBar = {
             TopAppBar(
-                title = { Text(countryName) }, 
-                navigationIcon = { 
-                    IconButton(onClick = { navController.popBackStack() }) { 
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, null) 
-                    } 
+                title = { Text(periodName) },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, null)
+                    }
                 }
-            ) 
+            )
         }
     ) { padding ->
         if (isLoading) {

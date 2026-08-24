@@ -115,11 +115,18 @@ fun MainContent(parentNavController: NavController) {
             composable("settings") { SettingsScreen(bottomNavController, parentNavController) }
             
             // Nested Catalog Navigation
-            composable("rulers/{countryId}/{countryName}") { backStackEntry ->
-                RulerListScreen(
-                    bottomNavController, 
-                    backStackEntry.arguments?.getString("countryId") ?: "", 
+            composable("periods/{countryId}/{countryName}") { backStackEntry ->
+                PeriodListScreen(
+                    bottomNavController,
+                    backStackEntry.arguments?.getString("countryId") ?: "",
                     backStackEntry.arguments?.getString("countryName") ?: ""
+                )
+            }
+            composable("rulers/{periodId}/{periodName}") { backStackEntry ->
+                RulerListScreen(
+                    bottomNavController,
+                    backStackEntry.arguments?.getString("periodId") ?: "",
+                    backStackEntry.arguments?.getString("periodName") ?: ""
                 )
             }
             composable("categories/{rulerId}/{rulerName}") { backStackEntry ->
@@ -185,6 +192,7 @@ fun AppBottomBar(navController: NavController) {
         NavigationBar {
             // Catalog Tab Detection (includes sub-screens)
             val isCatalogActive = currentRoute == "catalog_root" ||
+                currentRoute?.startsWith("periods") == true ||
                 currentRoute?.startsWith("rulers") == true ||
                 currentRoute?.startsWith("categories") == true ||
                 currentRoute?.startsWith("coins") == true ||
