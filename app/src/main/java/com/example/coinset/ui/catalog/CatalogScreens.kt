@@ -69,18 +69,45 @@ private fun localizedMetalType(metalType: String): String = when (metalType.lowe
 }
 
 // Catalog category browsing uses stable English keys ("gold"/"silver"/"copper"/
-// "trial") in routes and matching logic - never the localized label - so
+// "other"/"trial") in routes and matching logic - never the localized label - so
 // switching the app language in Settings can't silently break which coins
 // show up under a category. Only the displayed text is localized.
-private val CATALOG_CATEGORY_KEYS = listOf("gold", "silver", "copper", "trial")
+private val CATALOG_CATEGORY_KEYS = listOf("gold", "silver", "copper", "other", "trial")
 
 @Composable
 private fun categoryDisplayName(categoryKey: String): String = when (categoryKey) {
     "gold" -> stringResource(R.string.metal_gold)
     "silver" -> stringResource(R.string.metal_silver)
     "copper" -> stringResource(R.string.metal_copper)
+    "other" -> stringResource(R.string.metal_other)
     "trial" -> stringResource(R.string.catalog_category_trial)
     else -> categoryKey
+}
+
+/**
+ * Single source of truth for "does this coin belong under that category tile",
+ * shared by the denomination list and the coin list so the two can't drift.
+ *
+ * Two things this fixes. "other" is a new tile: 476 Soviet and modern Russian
+ * coins carry metal_type "other" and had no category at all, so a third of that
+ * catalog was effectively unreachable. And "trial" used to be a catch-all that
+ * matched every coin regardless of metal - it now actually looks for pattern
+ * and trial strikes, which Numista marks in the title ("(Pattern)", "Obverse
+ * Trial"). Those are ~89 coins out of ~2465, not all of them.
+ *
+ * A pattern coin still also appears under its own metal, which is intended -
+ * the tiles are browsing paths, not an exclusive partition.
+ */
+private fun coinMatchesCategory(name: String, metalType: String?, category: String): Boolean {
+    val metal = (metalType ?: "").lowercase()
+    return when (category) {
+        "gold" -> metal == "gold"
+        "silver" -> metal == "silver"
+        "copper" -> metal == "copper" || metal == "bronze"
+        "other" -> metal == "other" || metal == "brass" || metal.isBlank()
+        "trial" -> name.lowercase().let { it.contains("pattern") || it.contains("trial") }
+        else -> false
+    }
 }
 
 @Composable
@@ -351,15 +378,7 @@ fun CoinListScreen(navController: NavController, rulerId: String, category: Stri
             repository.getCoins(rulerId = rId).onSuccess { result ->
                 val set = mutableSetOf<String>()
                 for (coin in result) {
-                    val m = (coin.metalType ?: "").lowercase()
-                    val matches = when (category) {
-                        "gold" -> m == "gold"
-                        "silver" -> m == "silver"
-                        "copper" -> m == "copper" || m == "bronze"
-                        else -> false
-                    }
-
-                    if (category == "trial" || matches) {
+                    if (coinMatchesCategory(coin.name, coin.metalType, category)) {
                         set.add(coin.denomination ?: coin.name)
                     }
                 }
@@ -410,16 +429,10 @@ fun CoinTypeScreen(navController: NavController, rulerId: String, category: Stri
                 for (coin in result) {
                     val currentDenomination = coin.denomination ?: coin.name
                     
-                    if (currentDenomination == denomination) {
-                        val m = coin.metalType.lowercase()
-                        val matches = when (category) {
-                            "gold" -> m == "gold"
-                            "silver" -> m == "silver"
-                            "copper" -> m == "copper" || m == "bronze"
-                            else -> false
-                        }
-
-                        if (category == "trial" || matches) coins.add(coin)
+                    if (currentDenomination == denomination &&
+                        coinMatchesCategory(coin.name, coin.metalType, category)
+                    ) {
+                        coins.add(coin)
                     }
                 }
                 coins.sortBy { it.year }
