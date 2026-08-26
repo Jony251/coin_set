@@ -39,8 +39,13 @@ class AuthRepository(private val api: CoinsetApi = RetrofitClient.api) {
     }
 }
 
+// Upper bound on how many coins one filtered catalog view will page in. Well
+// above the largest ruler today (Modern Russia, 339) - it exists only so a
+// server bug can't spin the paging loop forever.
+private const val MAX_COINS_PER_FILTER = 5000
+
 class CatalogRepository(private val api: CoinsetApi = RetrofitClient.api) {
-    
+
     suspend fun getCountries(include: String? = null): Result<List<CountryResponse>> {
         return try {
             val response = api.getCountries(include = include)
@@ -86,10 +91,33 @@ class CatalogRepository(private val api: CoinsetApi = RetrofitClient.api) {
         }
     }
 
+    /**
+     * Fetches EVERY coin for the filter, not just the first page.
+     *
+     * /api/coins caps limit at 100 and orders by created_at DESC, and a single
+     * unpaged call silently returned only the newest 100. Any ruler past that
+     * count lost their oldest coins with no indication in the UI - Nicholas II
+     * has 157, and the 55 gold coins from the original hand-seeded catalog are
+     * the oldest rows of all, so the catalog showed him as having no gold at
+     * all. Several other rulers were truncated the same way (Modern Russia 339,
+     * Wilhelm II 152, GDR 112).
+     */
     suspend fun getCoins(rulerId: Int? = null, metalType: String? = null): Result<List<CoinResponse>> {
         return try {
-            val response = api.getCoins(rulerId = rulerId, metalType = metalType)
-            Result.success(response)
+            val pageSize = 100
+            val all = mutableListOf<CoinResponse>()
+            var skip = 0
+            while (true) {
+                val page = api.getCoins(
+                    skip = skip, limit = pageSize, rulerId = rulerId, metalType = metalType
+                )
+                all.addAll(page)
+                // A short page means the end; the guard stops a malformed
+                // always-full response from looping forever.
+                if (page.size < pageSize || all.size >= MAX_COINS_PER_FILTER) break
+                skip += pageSize
+            }
+            Result.success(all)
         } catch (e: Exception) {
             Result.failure(e)
         }
