@@ -139,14 +139,72 @@ private fun varietyOf(coin: CoinResponse): String? {
     // comparison never fires.
     val separator = name.indexOf(" - ")
     if (separator >= 0) {
-        return name.substring(separator + 3).trim().ifBlank { null }
+        return stripMintMasterSuffix(name.substring(separator + 3).trim()).ifBlank { null }
     }
     val denomination = coin.denomination?.trim()
     if (!denomination.isNullOrEmpty() && name.startsWith(denomination, ignoreCase = true)) {
         return name.removeRange(0, denomination.length).trimStart(' ', '-', '–', '—')
+            .let(::stripMintMasterSuffix)
             .ifBlank { null }
     }
     return coin.series
+}
+
+// The mint master's initials as they are punched on the die: one to three
+// capitals, Cyrillic or Latin, sometimes several sets for a type that spans
+// years ("НФ, ДС, АГ"). Anchored and capitals-only so that a parenthesis
+// holding an ordinary word - "(империал)", "(with the name of Peter)" - is
+// not mistaken for a mint mark.
+private val MINT_MASTER_INITIALS = Regex("^[А-ЯЁA-Z]{1,3}(\\s*[,/·]\\s*[А-ЯЁA-Z]{1,3})*$")
+private val TRAILING_PARENTHETICAL = Regex("\\(([^()]{1,40})\\)\\s*$")
+
+/**
+ * The mint master's initials for a coin, whichever place they currently live.
+ *
+ * `coins.mint_master` is the real home, and the Empire's gold already uses
+ * it. Nicholas II's 55 gold rows predate the column and still carry the
+ * initials as a suffix in `name` ("10 рублей (АГ)"). Reading both means the
+ * screens look the same before and after those rows are migrated - the
+ * migration becomes invisible instead of being the moment two rows suddenly
+ * turn into a pair of identical "10 рублей".
+ */
+private fun mintMasterOf(coin: CoinResponse): String? {
+    coin.mintMaster?.trim()?.takeIf { it.isNotEmpty() }?.let { return it }
+    val inName = TRAILING_PARENTHETICAL.find(coin.name.trim())?.groupValues?.get(1)?.trim()
+    return inName?.takeIf { MINT_MASTER_INITIALS.matches(it) }
+}
+
+/** Drops the "(АГ)" the mint mark already shows, so it isn't printed twice. */
+private fun stripMintMasterSuffix(text: String): String {
+    val match = TRAILING_PARENTHETICAL.find(text) ?: return text
+    val inner = match.groupValues[1].trim()
+    if (!MINT_MASTER_INITIALS.matches(inner)) return text
+    return text.removeRange(match.range).trim()
+}
+
+/**
+ * The edge of a coin, in the reader's language.
+ *
+ * Two shapes arrive from the backend: the Russian word the Konros catalogue
+ * prints ("гладкий", "шнуровидный"), and - where a row was imported straight
+ * from the book's tables - the bare numeric code it uses instead. Both mean
+ * the same seven things, so both fold onto the same localized strings.
+ * Anything else is free text and is shown untouched rather than dropped.
+ */
+@Composable
+private fun localizedEdge(raw: String?): String? {
+    val edge = raw?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+    val key = when (edge.lowercase().removeSuffix(".")) {
+        "0", "гладкий", "гладкая", "plain", "smooth" -> R.string.edge_plain
+        "1", "шнур", "шнуровидный", "шнуровидная", "cord" -> R.string.edge_cord
+        "2", "пунктир", "пунктирный", "пунктирная", "dotted" -> R.string.edge_dotted
+        "3", "рубчатый", "рубчатая", "reeded" -> R.string.edge_reeded
+        "4", "надпись", "с надписью", "lettered" -> R.string.edge_lettered
+        "5", "сетчатый", "сетчатая", "mesh" -> R.string.edge_mesh
+        "7", "узорный", "узорчатый", "узорная", "patterned" -> R.string.edge_patterned
+        else -> return edge
+    }
+    return stringResource(key)
 }
 
 /**
@@ -813,10 +871,21 @@ private fun CoinRowCard(coin: CoinResponse, onClick: () -> Unit, onAdd: () -> Un
             CoinDisc(imageUrl = coin.imageUrl, metalType = coin.metalType, size = 52.dp)
             Spacer(Modifier.width(Spacing.md))
             Column(Modifier.weight(1f)) {
-                Text(
-                    text = coin.year?.toString() ?: coin.denomination.orEmpty(),
-                    style = tabular(MaterialTheme.typography.titleLarge)
-                )
+                // Year and mint mark share the headline row. Within one
+                // denomination the year is what people scan by, but it stops
+                // being unique the moment two mint masters struck the same
+                // year - so the mark has to sit at the same altitude as the
+                // year, not below it among the chips.
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = coin.year?.toString() ?: coin.denomination.orEmpty(),
+                        style = tabular(MaterialTheme.typography.titleLarge)
+                    )
+                    mintMasterOf(coin)?.let { initials ->
+                        Spacer(Modifier.width(Spacing.sm))
+                        MintMark(initials)
+                    }
+                }
                 varietyOf(coin)?.let { variety ->
                     Text(
                         text = variety,
@@ -959,10 +1028,22 @@ fun CoinDetailScreen(navController: NavController, coinId: String) {
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                        Text(
-                            text = current.denomination ?: current.name,
-                            style = MaterialTheme.typography.headlineSmall
-                        )
+                        // Same reason as in the list row: without the mark,
+                        // two coins that differ only by mint master open onto
+                        // two screens headed by the identical "10 рублей".
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = current.denomination ?: current.name,
+                                style = MaterialTheme.typography.headlineSmall,
+                                modifier = Modifier.weight(1f, fill = false),
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            mintMasterOf(current)?.let { initials ->
+                                Spacer(Modifier.width(Spacing.sm))
+                                MintMark(initials)
+                            }
+                        }
                         varietyOf(current)?.let { variety ->
                             Text(
                                 text = variety,
@@ -980,6 +1061,12 @@ fun CoinDetailScreen(navController: NavController, coinId: String) {
                             Spec(stringResource(R.string.catalog_label_metal), localizedMetalType(current.metalType)),
                             Spec(stringResource(R.string.catalog_label_weight), current.weight?.takeIf { it > 0 }?.let { stringResource(R.string.catalog_value_grams, formatMeasure(it)) }),
                             Spec(stringResource(R.string.catalog_label_diameter), current.diameter?.takeIf { it > 0 }?.let { stringResource(R.string.catalog_value_mm, formatMeasure(it)) }),
+                            // Mint master and edge pair up: both are read off
+                            // the coin's rim, and both are empty for most of
+                            // the catalog - SpecGrid drops empty cells, so the
+                            // grid simply closes up instead of leaving a hole.
+                            Spec(stringResource(R.string.catalog_label_mint_master), mintMasterOf(current)),
+                            Spec(stringResource(R.string.catalog_label_edge), localizedEdge(current.edge)),
                             Spec(stringResource(R.string.catalog_label_rarity), localizedRarity(current.rarity)),
                             Spec(stringResource(R.string.catalog_label_rarity_code), current.rarityCode),
                             Spec(stringResource(R.string.catalog_label_mintage_spmd), groupDigits(current.mintageSpmd)),

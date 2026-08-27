@@ -158,6 +158,15 @@
     <string name="catalog_no_coins_message">По этому номиналу и металлу ничего не нашлось.</string>
     <string name="catalog_label_weight">Вес</string>
     <string name="catalog_label_diameter">Диаметр</string>
+    <string name="catalog_label_mint_master">Минцмейстер</string>
+    <string name="catalog_label_edge">Гурт</string>
+    <string name="edge_plain">Гладкий</string>
+    <string name="edge_cord">Шнуровидный</string>
+    <string name="edge_dotted">Пунктир</string>
+    <string name="edge_reeded">Рубчатый</string>
+    <string name="edge_lettered">С надписью</string>
+    <string name="edge_mesh">Сетчатый</string>
+    <string name="edge_patterned">Узорный</string>
     <string name="catalog_value_grams">%1$s г</string>
     <string name="catalog_value_mm">%1$s мм</string>
     <string name="catalog_add_your_photo">Добавить своё фото</string>

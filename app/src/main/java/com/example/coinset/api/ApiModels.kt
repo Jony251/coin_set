@@ -127,6 +127,12 @@ data class CoinResponse(
     val diameter: Double?,
     val description: String?,
     @SerializedName("image_url") val imageUrl: String?,
+    // Both nullable and empty for most of the catalog: only the Empire's gold
+    // has them filled in so far. mintMaster is what tells two otherwise
+    // identical coins of the same year apart ("10 рублей" АГ vs ЭБ), so the
+    // screens treat it as an identifier, not as one more spec.
+    val edge: String?,
+    @SerializedName("mint_master") val mintMaster: String?,
     val rarity: String,
     val series: String?,
     @SerializedName("rarity_code") val rarityCode: String?,

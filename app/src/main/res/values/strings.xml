@@ -160,6 +160,18 @@
     <!-- Catalog: coin detail -->
     <string name="catalog_label_weight">Weight</string>
     <string name="catalog_label_diameter">Diameter</string>
+    <string name="catalog_label_mint_master">Mint Master</string>
+    <string name="catalog_label_edge">Edge</string>
+    <!-- The seven edge types of the Konros catalogue of Russian coins. The
+         backend sends either the Russian word or the catalogue's bare code
+         (0,1,2,3,4,5,7); both resolve to these. -->
+    <string name="edge_plain">Plain</string>
+    <string name="edge_cord">Corded</string>
+    <string name="edge_dotted">Dotted</string>
+    <string name="edge_reeded">Reeded</string>
+    <string name="edge_lettered">Lettered</string>
+    <string name="edge_mesh">Mesh</string>
+    <string name="edge_patterned">Patterned</string>
     <string name="catalog_value_grams">%1$s g</string>
     <string name="catalog_value_mm">%1$s mm</string>
     <string name="catalog_add_your_photo">Add your photo</string>

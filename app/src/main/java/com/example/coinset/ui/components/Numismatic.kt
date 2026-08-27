@@ -1,5 +1,6 @@
 package com.example.coinset.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -12,12 +13,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.coinset.ui.theme.MetalPalette
 import com.example.coinset.ui.theme.Spacing
@@ -372,6 +375,39 @@ fun FactChip(
             style = tabular(MaterialTheme.typography.labelSmall),
             modifier = Modifier.padding(horizontal = Spacing.sm, vertical = 3.dp),
             maxLines = 1
+        )
+    }
+}
+
+/**
+ * The mint master's initials, drawn the way they appear on the coin: a small
+ * punched mark, outlined rather than filled.
+ *
+ * This is not a FactChip on purpose. Weight and rarity are facts *about* a
+ * coin; the mint master's initials are part of its *identity* - they are the
+ * only thing that tells a 1899 "10 рублей" struck under Аполлон Грасгоф from
+ * the one struck under Эликум Бабаянц. Two rows with the same denomination
+ * and the same year must not read as a duplicate, so the mark gets the
+ * accent colour and sits on the headline row, not down among the chips.
+ *
+ * Initials are Cyrillic or Latin ("АГ", "BS", "НФ, ДС, АГ") and always run
+ * left-to-right, so they are isolated to survive a Hebrew RTL layout.
+ */
+@Composable
+fun MintMark(initials: String, modifier: Modifier = Modifier) {
+    Surface(
+        modifier = modifier,
+        shape = MaterialTheme.shapes.extraSmall,
+        color = Color.Transparent,
+        contentColor = MaterialTheme.colorScheme.primary,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
+    ) {
+        Text(
+            text = ltrIsolate(initials),
+            style = tabular(MaterialTheme.typography.labelMedium).copy(letterSpacing = 0.6.sp),
+            modifier = Modifier.padding(horizontal = Spacing.sm, vertical = 2.dp),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
         )
     }
 }

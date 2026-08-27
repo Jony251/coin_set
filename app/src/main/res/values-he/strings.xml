@@ -158,6 +158,15 @@
     <string name="catalog_no_coins_message">לא נמצא דבר בערך ובמתכת האלה.</string>
     <string name="catalog_label_weight">משקל</string>
     <string name="catalog_label_diameter">קוטר</string>
+    <string name="catalog_label_mint_master">מנהל ההטבעה</string>
+    <string name="catalog_label_edge">דופן</string>
+    <string name="edge_plain">חלקה</string>
+    <string name="edge_cord">דמוית חבל</string>
+    <string name="edge_dotted">מנוקדת</string>
+    <string name="edge_reeded">מחורצת</string>
+    <string name="edge_lettered">עם כיתוב</string>
+    <string name="edge_mesh">רשתית</string>
+    <string name="edge_patterned">מעוטרת</string>
     <string name="catalog_value_grams">%1$s גרם</string>
     <string name="catalog_value_mm">%1$s ממ</string>
     <string name="catalog_add_your_photo">הוספת תמונה שלך</string>
