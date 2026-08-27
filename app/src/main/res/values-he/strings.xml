@@ -16,13 +16,10 @@
     <!-- Home screen -->
     <string name="home_title">בית</string>
     <string name="home_search_placeholder">חיפוש כל מטבע</string>
-    <string name="home_stories_banner_title">גלו מה קורה בקהילה שלכם</string>
-    <string name="home_stories_banner_subtitle">עיינו בקטלוג כדי לגלות מטבעות ששווה לאסוף.</string>
     <string name="home_your_collection">האוסף שלך</string>
     <string name="home_your_wishlist">רשימת המשאלות שלך</string>
-    <string name="home_empty_collection_hint">הוסיפו מטבעות כדי לראות אותם כאן</string>
-    <string name="home_empty_wishlist_hint">הוסיפו מטבעות לרשימת המשאלות כדי לראות אותם כאן</string>
     <string name="home_news_title">חדשות</string>
+    <string name="home_see_all">הצג הכול</string>
 
     <!-- Catalog screens -->
     <string name="catalog_title">קטלוג</string>
@@ -142,4 +139,45 @@
     <string name="collection_unknown_coin">מטבע לא ידוע</string>
     <string name="collection_note_prefix">הערה: %1$s</string>
     <string name="collection_price_rub">%1$s רובל</string>
+
+    <!-- catalog -->
+    <string name="catalog_year_range">%1$d — %2$d</string>
+    <string name="catalog_year_since">מ־%1$d</string>
+    <string name="catalog_periods_count">תקופות: %1$d</string>
+    <string name="catalog_rulers_count">שליטים: %1$d</string>
+    <string name="catalog_coins_count">מטבעות: %1$d</string>
+    <string name="catalog_browse_by_metal">לפי מתכת</string>
+    <string name="catalog_show_more">עוד</string>
+    <string name="catalog_show_less">כווץ</string>
+    <string name="catalog_country_not_found_hint">נסו איות אחר. אנחנו רושמים מה מחפשים ומוסיפים מדינות חסרות.</string>
+    <string name="catalog_no_rulers_title">אין עדיין שליטים</string>
+    <string name="catalog_no_rulers_message">בתקופה הזו אין עדיין שליטים בקטלוג.</string>
+    <string name="catalog_no_denominations_hint">לשליט הזה אין מטבעות מהמתכת הזו. נסו מתכת אחרת.</string>
+    <string name="catalog_back_to_metals">חזרה למתכות</string>
+    <string name="catalog_no_coins_title">אין מטבעות בערך הזה</string>
+    <string name="catalog_no_coins_message">לא נמצא דבר בערך ובמתכת האלה.</string>
+    <string name="catalog_label_weight">משקל</string>
+    <string name="catalog_label_diameter">קוטר</string>
+    <string name="catalog_value_grams">%1$s גרם</string>
+    <string name="catalog_value_mm">%1$s ממ</string>
+    <string name="catalog_add_your_photo">הוספת תמונה שלך</string>
+    <!-- collection -->
+    <string name="collection_stat_coins">מטבעות</string>
+    <string name="collection_stat_rulers">שליטים</string>
+    <string name="collection_stat_spent">הושקע</string>
+    <string name="collection_stat_value_rub">%1$s ₽</string>
+    <string name="collection_empty_message">מטבעות שתוסיפו מהקטלוג יופיעו כאן, עם התמונות וההערות שלכם.</string>
+    <string name="collection_wishlist_empty_message">סמנו מטבעות שאתם מחפשים והם יחכו לכם כאן.</string>
+    <string name="collection_empty_action">פתיחת הקטלוג</string>
+    <!-- PRO -->
+    <string name="pro_one_time_purchase">499 ₽ חד־פעמי. בלי מנוי.</string>
+    <string name="pro_row_catalog">כל הקטלוג</string>
+    <string name="pro_row_collection">האוסף שלך</string>
+    <string name="pro_row_wishlist">רשימת המשאלות</string>
+    <string name="pro_column_free">Free</string>
+    <string name="pro_column_pro">PRO</string>
+    <string name="pro_included">כלול</string>
+    <string name="pro_activate_button">קבלת PRO</string>
+    <string name="catalog_action_own">לאוסף</string>
+    <string name="catalog_action_want">רוצה</string>
 </resources>

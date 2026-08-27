@@ -73,6 +73,19 @@ class CatalogRepository(private val api: CoinsetApi = RetrofitClient.api) {
         }
     }
     
+    /**
+     * One ruler's own record - portrait, reign and description. Separate from
+     * getRulerWithCoins because the ruler screen needs the *paged* coin list
+     * (getCoins) for its per-metal counts, not the unpaged ?include=coins one.
+     */
+    suspend fun getRuler(id: Int): Result<RulerResponse> {
+        return try {
+            Result.success(api.getRuler(id))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun getRulerWithCoins(id: Int): Result<RulerWithCoins> {
         return try {
             val response = api.getRulerWithCoins(id)

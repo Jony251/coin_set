@@ -16,13 +16,10 @@
     <!-- Home screen -->
     <string name="home_title">Главная</string>
     <string name="home_search_placeholder">Поиск любой монеты</string>
-    <string name="home_stories_banner_title">Узнайте, чем занимается сообщество</string>
-    <string name="home_stories_banner_subtitle">Загляните в каталог, чтобы найти монеты, достойные коллекции.</string>
     <string name="home_your_collection">Ваша коллекция</string>
     <string name="home_your_wishlist">Ваш список желаний</string>
-    <string name="home_empty_collection_hint">Добавьте монеты, чтобы увидеть их здесь</string>
-    <string name="home_empty_wishlist_hint">Добавьте монеты в список желаний, чтобы увидеть их здесь</string>
     <string name="home_news_title">Новости</string>
+    <string name="home_see_all">Все</string>
 
     <!-- Catalog screens -->
     <string name="catalog_title">Каталог</string>
@@ -142,4 +139,45 @@
     <string name="collection_unknown_coin">Неизвестная монета</string>
     <string name="collection_note_prefix">Заметка: %1$s</string>
     <string name="collection_price_rub">%1$s руб.</string>
+
+    <!-- Каталог -->
+    <string name="catalog_year_range">%1$d — %2$d</string>
+    <string name="catalog_year_since">с %1$d</string>
+    <string name="catalog_periods_count">Периодов: %1$d</string>
+    <string name="catalog_rulers_count">Правителей: %1$d</string>
+    <string name="catalog_coins_count">Монет: %1$d</string>
+    <string name="catalog_browse_by_metal">По металлу</string>
+    <string name="catalog_show_more">Ещё</string>
+    <string name="catalog_show_less">Свернуть</string>
+    <string name="catalog_country_not_found_hint">Попробуйте другое написание. Мы записываем, что ищут, и добавляем недостающие страны.</string>
+    <string name="catalog_no_rulers_title">Правителей пока нет</string>
+    <string name="catalog_no_rulers_message">В этом периоде ещё нет правителей в каталоге.</string>
+    <string name="catalog_no_denominations_hint">У этого правителя нет монет из этого металла. Посмотрите другой металл.</string>
+    <string name="catalog_back_to_metals">К металлам</string>
+    <string name="catalog_no_coins_title">Монет этого номинала нет</string>
+    <string name="catalog_no_coins_message">По этому номиналу и металлу ничего не нашлось.</string>
+    <string name="catalog_label_weight">Вес</string>
+    <string name="catalog_label_diameter">Диаметр</string>
+    <string name="catalog_value_grams">%1$s г</string>
+    <string name="catalog_value_mm">%1$s мм</string>
+    <string name="catalog_add_your_photo">Добавить своё фото</string>
+    <!-- Коллекция -->
+    <string name="collection_stat_coins">Монет</string>
+    <string name="collection_stat_rulers">Правителей</string>
+    <string name="collection_stat_spent">Вложено</string>
+    <string name="collection_stat_value_rub">%1$s ₽</string>
+    <string name="collection_empty_message">Монеты, добавленные из каталога, появятся здесь — со своими фотографиями и заметками.</string>
+    <string name="collection_wishlist_empty_message">Отмечайте монеты, которые ищете, и они будут ждать вас здесь.</string>
+    <string name="collection_empty_action">Открыть каталог</string>
+    <!-- PRO -->
+    <string name="pro_one_time_purchase">499 ₽ разово. Без подписки.</string>
+    <string name="pro_row_catalog">Весь каталог</string>
+    <string name="pro_row_collection">Своя коллекция</string>
+    <string name="pro_row_wishlist">Список желаний</string>
+    <string name="pro_column_free">Free</string>
+    <string name="pro_column_pro">PRO</string>
+    <string name="pro_included">Входит</string>
+    <string name="pro_activate_button">Получить PRO</string>
+    <string name="catalog_action_own">В коллекцию</string>
+    <string name="catalog_action_want">Хочу купить</string>
 </resources>

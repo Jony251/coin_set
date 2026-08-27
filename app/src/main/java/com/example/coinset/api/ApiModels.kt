@@ -73,6 +73,18 @@ data class PeriodWithRulers(
     val rulers: List<RulerResponse> = emptyList()
 )
 
+/**
+ * imageUrl is an absolute URL to a portrait on our own server, same shape as
+ * Coin.image_url, and is null for every ruler outside the 14 Russian emperors
+ * that have been filled in - the screens fall back to a monogram rather than a
+ * broken image.
+ *
+ * description now carries 3-5 real sentences (280-460 chars), so nothing may
+ * assume it fits on one line.
+ *
+ * Chronological ordering is the server's job (period_start, then period_end) -
+ * the client renders the list in the order it arrives and must not re-sort.
+ */
 data class RulerResponse(
     val id: Int,
     val name: String,
@@ -80,6 +92,7 @@ data class RulerResponse(
     @SerializedName("period_start") val periodStart: Int,
     @SerializedName("period_end") val periodEnd: Int,
     val description: String?,
+    @SerializedName("image_url") val imageUrl: String? = null,
     @SerializedName("created_at") val createdAt: String,
     @SerializedName("period_name") val periodName: String?,
     @SerializedName("country_id") val countryId: Int?,
@@ -94,6 +107,7 @@ data class RulerWithCoins(
     @SerializedName("period_start") val periodStart: Int,
     @SerializedName("period_end") val periodEnd: Int,
     val description: String?,
+    @SerializedName("image_url") val imageUrl: String? = null,
     @SerializedName("created_at") val createdAt: String,
     @SerializedName("period_name") val periodName: String?,
     @SerializedName("country_id") val countryId: Int?,
@@ -144,6 +158,11 @@ data class UserCoinResponse(
     @SerializedName("coin_name") val coinName: String?,
     @SerializedName("coin_year") val coinYear: Int?,
     @SerializedName("coin_metal_type") val coinMetalType: String?,
+    // Catalog photo of the underlying coin. Requested from the backend so the
+    // collection shelf has something to show when the user hasn't uploaded
+    // their own photo; null until it ships, and the shelf falls back to a
+    // metal-tinted disc.
+    @SerializedName("coin_image_url") val coinImageUrl: String? = null,
     @SerializedName("ruler_name") val rulerName: String?,
     @SerializedName("country_name") val countryName: String?
 )

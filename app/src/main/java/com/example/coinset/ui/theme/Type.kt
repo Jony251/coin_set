@@ -33,3 +33,14 @@ val Typography = Typography(
     labelMedium = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Medium, fontSize = 12.sp, lineHeight = 16.sp, letterSpacing = 0.5.sp),
     labelSmall = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Medium, fontSize = 11.sp, lineHeight = 16.sp, letterSpacing = 0.5.sp)
 )
+
+/**
+ * Tabular (fixed-width) figures.
+ *
+ * Roboto's default digits are proportional, so a column of years or mintages
+ * shimmies horizontally from row to row and can't be compared by eye. Every
+ * number that appears in a column - years in the coin list, the spec grid,
+ * collection totals - goes through this. Text that merely contains a number in
+ * a sentence does not.
+ */
+fun tabular(style: TextStyle): TextStyle = style.copy(fontFeatureSettings = "tnum")

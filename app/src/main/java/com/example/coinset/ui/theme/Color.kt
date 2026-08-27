@@ -93,3 +93,33 @@ val md_dark_inverseSurface = Color(0xFFECE1D4)
 val md_dark_inverseOnSurface = Color(0xFF362F27)
 val md_dark_inversePrimary = Color(0xFF8A5A2B)
 val md_dark_scrim = Color(0xFF000000)
+
+// ---------------------------------------------------------------------------
+// Metal palette.
+//
+// These are NOT brand roles and never act as accents - they encode a physical
+// property of the object (what the coin is made of), the same way a country
+// flag encodes a country. Kept out of the M3 ColorScheme deliberately: adding
+// gold/silver/copper as theme roles would invite them to leak into buttons and
+// headers, and the app's one signature hue stays bronze.
+//
+// Used only by CoinDisc's placeholder, when a catalog row has no photo, so a
+// coin with no picture still reads as a coin of that metal instead of a grey
+// box. Tones are chosen to sit on both the light (#FFF8F3) and dark (#17130D)
+// grounds without either one glowing.
+// ---------------------------------------------------------------------------
+data class MetalTones(val highlight: Color, val base: Color, val shadow: Color)
+
+object MetalPalette {
+    val gold = MetalTones(Color(0xFFE9C98D), Color(0xFFC79B4E), Color(0xFF8A6224))
+    val silver = MetalTones(Color(0xFFE0DCD6), Color(0xFFB0AAA2), Color(0xFF77726B))
+    val copper = MetalTones(Color(0xFFC78354), Color(0xFF9E5A31), Color(0xFF6B3A1D))
+    val neutral = MetalTones(Color(0xFFD8CCBD), Color(0xFFAD9E8B), Color(0xFF75685A))
+
+    fun of(metalType: String?): MetalTones = when (metalType?.lowercase()) {
+        "gold" -> gold
+        "silver" -> silver
+        "copper", "bronze" -> copper
+        else -> neutral
+    }
+}

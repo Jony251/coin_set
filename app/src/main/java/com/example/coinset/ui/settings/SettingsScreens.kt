@@ -10,6 +10,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
@@ -19,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.os.LocaleListCompat
 import androidx.navigation.NavController
@@ -267,51 +269,52 @@ fun PremiumScreen(navController: NavController) {
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
         Column(
-            modifier = Modifier.padding(padding).padding(Spacing.xxl).fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally
+            modifier = Modifier
+                .padding(padding)
+                .padding(horizontal = Spacing.lg)
+                .fillMaxSize()
         ) {
-            Icon(
-                imageVector = Icons.Default.Star,
-                contentDescription = null,
-                modifier = Modifier.size(80.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
             Spacer(Modifier.height(Spacing.lg))
-            Text(
-                text = stringResource(R.string.settings_coin_set_pro),
-                style = MaterialTheme.typography.headlineLarge,
-                fontWeight = FontWeight.Bold
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.Star,
+                    contentDescription = null,
+                    modifier = Modifier.size(40.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Spacer(Modifier.width(Spacing.md))
+                Column {
+                    Text(
+                        text = stringResource(R.string.settings_coin_set_pro),
+                        style = MaterialTheme.typography.headlineSmall
+                    )
+                    Text(
+                        text = stringResource(R.string.pro_one_time_purchase),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(Spacing.xl))
+
+            // A real comparison. The previous version listed the same four
+            // features twice, both times ticked, which read as "Free already
+            // has everything". Only rows that genuinely differ are marked as
+            // differing - the catalog and the collection really are free.
+            ComparisonTable(
+                rows = listOf(
+                    ComparisonRow(stringResource(R.string.pro_row_catalog), free = true, pro = true),
+                    ComparisonRow(stringResource(R.string.pro_row_collection), free = true, pro = true),
+                    ComparisonRow(stringResource(R.string.pro_row_wishlist), free = true, pro = true),
+                    ComparisonRow(stringResource(R.string.pro_feature_photos), free = false, pro = true),
+                    ComparisonRow(stringResource(R.string.pro_feature_notes), free = false, pro = true),
+                    ComparisonRow(stringResource(R.string.pro_feature_value_estimation), free = false, pro = true),
+                    ComparisonRow(stringResource(R.string.pro_feature_priority_support), free = false, pro = true)
+                )
             )
-            Spacer(Modifier.height(Spacing.xxl))
-
-            // Free vs PRO contrast: same four features, shown once muted (what you
-            // have now) and once highlighted (what unlocking adds) - reads as an
-            // upgrade rather than a flat feature list.
-            Text(
-                stringResource(R.string.pro_comparison_free_label),
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(Modifier.height(Spacing.xs))
-            BulletItem(stringResource(R.string.pro_feature_notes), isActive = false)
-            BulletItem(stringResource(R.string.pro_feature_photos), isActive = false)
-            BulletItem(stringResource(R.string.pro_feature_value_estimation), isActive = false)
-            BulletItem(stringResource(R.string.pro_feature_priority_support), isActive = false)
-
-            Spacer(Modifier.height(Spacing.lg))
-
-            Text(stringResource(R.string.settings_unlock_features), fontWeight = FontWeight.Bold, modifier = Modifier.fillMaxWidth())
-            Spacer(Modifier.height(Spacing.sm))
-            BulletItem(stringResource(R.string.pro_feature_notes))
-            BulletItem(stringResource(R.string.pro_feature_photos))
-            BulletItem(stringResource(R.string.pro_feature_value_estimation))
-            BulletItem(stringResource(R.string.pro_feature_priority_support))
 
             Spacer(Modifier.weight(1f))
-
-            Text(stringResource(R.string.settings_price_rub), style = MaterialTheme.typography.titleLarge)
-            Spacer(Modifier.height(Spacing.lg))
 
             Button(
                 onClick = {
@@ -332,15 +335,88 @@ fun PremiumScreen(navController: NavController) {
                 if (isProcessing) {
                     CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
                 } else {
-                    Text(stringResource(R.string.settings_pay_activate))
+                    Text(stringResource(R.string.pro_activate_button))
                 }
             }
+            Spacer(Modifier.height(Spacing.lg))
+        }
+    }
+}
 
-            Spacer(Modifier.height(Spacing.sm))
+private data class ComparisonRow(val feature: String, val free: Boolean, val pro: Boolean)
+
+/**
+ * Free vs PRO, side by side.
+ *
+ * Built here rather than by restyling a Material list: this is a table with
+ * two verdict columns, which no stock component is, and the project rule is
+ * to build our own component when we want our own look.
+ */
+@Composable
+private fun ComparisonTable(rows: List<ComparisonRow>) {
+    val columnWidth = 56.dp
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surfaceContainer
+    ) {
+        Column {
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = Spacing.md, vertical = Spacing.sm),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Spacer(Modifier.weight(1f))
+                Text(
+                    text = stringResource(R.string.pro_column_free),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.width(columnWidth)
+                )
+                Text(
+                    text = stringResource(R.string.pro_column_pro),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.width(columnWidth)
+                )
+            }
+            HorizontalDivider()
+            rows.forEachIndexed { index, row ->
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = Spacing.md, vertical = Spacing.md),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = row.feature,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Verdict(row.free, Modifier.width(columnWidth))
+                    Verdict(row.pro, Modifier.width(columnWidth))
+                }
+                if (index != rows.lastIndex) HorizontalDivider()
+            }
+        }
+    }
+}
+
+@Composable
+private fun Verdict(included: Boolean, modifier: Modifier = Modifier) {
+    Box(modifier = modifier, contentAlignment = Alignment.Center) {
+        if (included) {
+            Icon(
+                imageVector = Icons.Default.Check,
+                contentDescription = stringResource(R.string.pro_included),
+                // tertiary = patina green = the app's one semantic "active" accent
+                tint = MaterialTheme.colorScheme.tertiary,
+                modifier = Modifier.size(Dimens.iconSmall)
+            )
+        } else {
             Text(
-                text = stringResource(R.string.settings_payment_simulation_notice),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                text = "—",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.outline
             )
         }
     }

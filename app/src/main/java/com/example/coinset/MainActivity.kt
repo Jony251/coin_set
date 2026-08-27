@@ -129,11 +129,14 @@ fun MainContent(parentNavController: NavController) {
                     backStackEntry.arguments?.getString("periodName") ?: ""
                 )
             }
-            composable("categories/{rulerId}/{rulerName}") { backStackEntry ->
-                CategoryListScreen(
-                    bottomNavController, 
-                    backStackEntry.arguments?.getString("rulerId") ?: "", 
-                    backStackEntry.arguments?.getString("rulerName") ?: ""
+            // Replaces the old "categories/{rulerId}/{rulerName}" route: the
+            // ruler's name no longer has to be smuggled through the route,
+            // because the screen fetches the whole ruler (portrait, reign,
+            // description) rather than only listing metal names.
+            composable("ruler/{rulerId}") { backStackEntry ->
+                RulerScreen(
+                    bottomNavController,
+                    backStackEntry.arguments?.getString("rulerId") ?: ""
                 )
             }
             composable("coins/{rulerId}/{category}") { backStackEntry ->
@@ -194,7 +197,7 @@ fun AppBottomBar(navController: NavController) {
             val isCatalogActive = currentRoute == "catalog_root" ||
                 currentRoute?.startsWith("periods") == true ||
                 currentRoute?.startsWith("rulers") == true ||
-                currentRoute?.startsWith("categories") == true ||
+                currentRoute?.startsWith("ruler/") == true ||
                 currentRoute?.startsWith("coins") == true ||
                 currentRoute?.startsWith("coin_type") == true ||
                 currentRoute?.startsWith("coin_detail") == true

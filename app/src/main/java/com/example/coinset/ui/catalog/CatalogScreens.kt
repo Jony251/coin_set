@@ -5,12 +5,11 @@ import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.Image
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -20,28 +19,21 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.coinset.R
 import com.example.coinset.api.*
-import com.example.coinset.ui.components.CoinSetLogo
-import com.example.coinset.ui.components.CountryFlag
-import com.example.coinset.ui.components.InfoRow
-import com.example.coinset.ui.components.LogoStyle
-import com.example.coinset.ui.components.SectionCard
-import com.example.coinset.ui.components.SectionCardEmphasis
+import com.example.coinset.ui.components.*
 import com.example.coinset.ui.theme.Spacing
+import com.example.coinset.ui.theme.tabular
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -84,6 +76,14 @@ private fun categoryDisplayName(categoryKey: String): String = when (categoryKey
     else -> categoryKey
 }
 
+/** The metal a category tile should be tinted with; "trial" has no metal. */
+private fun categoryMetal(categoryKey: String): String? = when (categoryKey) {
+    "gold" -> "gold"
+    "silver" -> "silver"
+    "copper" -> "copper"
+    else -> null
+}
+
 /**
  * Single source of truth for "does this coin belong under that category tile",
  * shared by the denomination list and the coin list so the two can't drift.
@@ -117,6 +117,63 @@ private fun localizedRarity(rarity: String): String = when (rarity.lowercase()) 
     "very_rare" -> stringResource(R.string.rarity_very_rare)
     "extremely_rare" -> stringResource(R.string.rarity_extremely_rare)
     else -> stringResource(R.string.rarity_common)
+}
+
+/** Anything above "common" earns the highlighted chip treatment. */
+private fun isNotableRarity(rarity: String) = rarity.lowercase() !in setOf("", "common")
+
+/**
+ * The part of a coin's catalog name that says which *variety* it is.
+ *
+ * Numista names read "Denga - Peter I / Ivan V (with the name of Peter)":
+ * denomination, then the thing that tells two coins of the same year apart.
+ * Showing `series` here instead printed "Стандартные обращаемые монеты" on
+ * every single row, which distinguished nothing - two 1682 dengas looked
+ * identical. Strips the denomination prefix and keeps the rest.
+ */
+private fun varietyOf(coin: CoinResponse): String? {
+    val name = coin.name.trim()
+    // Numista separates denomination from variety with " - ". Matching on the
+    // separator rather than on the denomination string is what works here:
+    // denomination is "1 Denga" while the name begins "Denga", so a prefix
+    // comparison never fires.
+    val separator = name.indexOf(" - ")
+    if (separator >= 0) {
+        return name.substring(separator + 3).trim().ifBlank { null }
+    }
+    val denomination = coin.denomination?.trim()
+    if (!denomination.isNullOrEmpty() && name.startsWith(denomination, ignoreCase = true)) {
+        return name.removeRange(0, denomination.length).trimStart(' ', '-', '–', '—')
+            .ifBlank { null }
+    }
+    return coin.series
+}
+
+/**
+ * Trims a measurement to at most one decimal and uses the locale's decimal
+ * separator, so a Russian screen shows "0,2 г" rather than Double.toString()'s
+ * "0.2" - and a whole number shows as "5", not "5.0".
+ */
+private fun formatMeasure(value: Double): String {
+    val rounded = Math.round(value * 10.0) / 10.0
+    return if (rounded == Math.floor(rounded)) {
+        rounded.toLong().toString()
+    } else {
+        String.format(java.util.Locale.getDefault(), "%.1f", rounded)
+    }
+}
+
+/**
+ * A reign or era as a range. An open-ended period ("1991 - " with a dangling
+ * dash on screen today) reads as "с 1991" instead, and a one-year reign
+ * collapses to a single year rather than "1762 - 1762".
+ */
+@Composable
+private fun yearRange(start: Int, end: Int?): String = when {
+    start <= 0 -> ""
+    end == null || end <= 0 -> stringResource(R.string.catalog_year_since, start)
+    end == start -> start.toString()
+    else -> ltrIsolate(stringResource(R.string.catalog_year_range, start, end))
 }
 
 /**
@@ -169,7 +226,7 @@ fun CountryListScreen(navController: NavController) {
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
-                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                modifier = Modifier.fillMaxWidth().padding(Spacing.lg),
                 placeholder = { Text(stringResource(R.string.catalog_search_country_placeholder)) },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 singleLine = true,
@@ -179,25 +236,29 @@ fun CountryListScreen(navController: NavController) {
             if (isLoading) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
             } else if (filteredCountries.isEmpty() && searchQuery.isNotBlank()) {
-                Column(
-                    modifier = Modifier.fillMaxSize().padding(32.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Text(
-                        text = stringResource(R.string.catalog_country_not_found, searchQuery),
-                        style = MaterialTheme.typography.bodyLarge,
-                        textAlign = TextAlign.Center,
-                        color = MaterialTheme.colorScheme.secondary
-                    )
-                }
+                EmptyState(
+                    icon = Icons.Default.TravelExplore,
+                    title = stringResource(R.string.catalog_country_not_found, searchQuery),
+                    message = stringResource(R.string.catalog_country_not_found_hint)
+                )
             } else {
                 LazyColumn {
                     items(filteredCountries) { country ->
                         ListItem(
-                            headlineContent = { Text(country.name, fontWeight = FontWeight.Medium) },
-                            supportingContent = { Text(country.code) },
+                            headlineContent = { Text(country.name, style = MaterialTheme.typography.titleMedium) },
+                            // Was the raw ISO code ("RU") - a database column shown to
+                            // the user where something useful belongs.
+                            supportingContent = {
+                                if (country.periodsCount > 0) {
+                                    Text(
+                                        text = stringResource(R.string.catalog_periods_count, country.periodsCount),
+                                        style = tabular(MaterialTheme.typography.bodySmall),
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            },
                             leadingContent = { CountryFlag(code = country.code) },
+                            trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.outline) },
                             modifier = Modifier.clickable {
                                 navController.navigate("periods/${country.id}/${country.name}")
                             }
@@ -257,22 +318,39 @@ fun PeriodListScreen(navController: NavController, countryId: String, countryNam
         if (isLoading) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
         } else {
-            LazyColumn(modifier = Modifier.padding(padding)) {
+            LazyColumn(
+                modifier = Modifier.padding(padding),
+                contentPadding = PaddingValues(Spacing.lg),
+                verticalArrangement = Arrangement.spacedBy(Spacing.sm)
+            ) {
                 items(periods) { period ->
                     Card(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
-                            .clickable { navController.navigate("rulers/${period.id}/${period.name}") }
+                        modifier = Modifier.fillMaxWidth()
+                            .clickable { navController.navigate("rulers/${period.id}/${period.name}") },
+                        shape = MaterialTheme.shapes.medium,
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
                     ) {
-                        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Surface(Modifier.size(60.dp), shape = CircleShape, color = MaterialTheme.colorScheme.surfaceVariant) {
-                                Icon(Icons.Default.History, null, Modifier.padding(12.dp))
+                        Row(Modifier.padding(Spacing.md), verticalAlignment = Alignment.CenterVertically) {
+                            Surface(Modifier.size(48.dp), shape = MaterialTheme.shapes.small, color = MaterialTheme.colorScheme.surfaceContainerHighest) {
+                                Icon(Icons.Default.History, null, Modifier.padding(Spacing.md), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
-                            Spacer(Modifier.width(16.dp))
-                            Column {
-                                Text(period.name, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-                                val endLabel = period.periodEnd?.toString() ?: ""
-                                Text("${period.periodStart} - $endLabel", color = MaterialTheme.colorScheme.secondary)
+                            Spacer(Modifier.width(Spacing.md))
+                            Column(Modifier.weight(1f)) {
+                                Text(period.name, style = MaterialTheme.typography.titleMedium)
+                                Text(
+                                    text = yearRange(period.periodStart, period.periodEnd),
+                                    style = tabular(MaterialTheme.typography.bodyMedium),
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                if (period.rulersCount > 0) {
+                                    Text(
+                                        text = stringResource(R.string.catalog_rulers_count, period.rulersCount),
+                                        style = tabular(MaterialTheme.typography.labelSmall),
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
                             }
+                            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.outline)
                         }
                     }
                 }
@@ -283,6 +361,14 @@ fun PeriodListScreen(navController: NavController, countryId: String, countryNam
 
 /**
  * Lists the rulers within one historical period.
+ *
+ * Previously fourteen identical grey slabs carrying an identical generic
+ * person glyph, where the only thing telling Peter I from Ivan VI was a pair
+ * of years. Now each ruler is a chapter heading: portrait, reign, and the
+ * opening of their description.
+ *
+ * Order comes from the server (chronological) and is deliberately not
+ * re-sorted here.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -318,23 +404,215 @@ fun RulerListScreen(navController: NavController, periodId: String, periodName: 
     ) { padding ->
         if (isLoading) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+        } else if (rulers.isEmpty()) {
+            EmptyState(
+                modifier = Modifier.padding(padding),
+                icon = Icons.Default.Person,
+                title = stringResource(R.string.catalog_no_rulers_title),
+                message = stringResource(R.string.catalog_no_rulers_message)
+            )
         } else {
-            LazyColumn(modifier = Modifier.padding(padding)) {
-                items(rulers) { ruler ->
-                    Card(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
-                            .clickable { navController.navigate("categories/${ruler.id}/${ruler.name}") }
-                    ) {
-                        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Surface(Modifier.size(60.dp), shape = CircleShape, color = MaterialTheme.colorScheme.surfaceVariant) {
-                                Icon(Icons.Default.Person, null, Modifier.padding(12.dp))
-                            }
-                            Spacer(Modifier.width(16.dp))
-                            Column {
-                                Text(ruler.name, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-                                if (ruler.periodStart > 0) Text("${ruler.periodStart} - ${ruler.periodEnd}", color = MaterialTheme.colorScheme.secondary)
+            LazyColumn(
+                modifier = Modifier.padding(padding),
+                contentPadding = PaddingValues(Spacing.lg),
+                verticalArrangement = Arrangement.spacedBy(Spacing.sm)
+            ) {
+                items(rulers) { ruler -> RulerCard(ruler) { navController.navigate("ruler/${ruler.id}") } }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RulerCard(ruler: RulerResponse, onClick: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth().clickable { onClick() },
+        shape = MaterialTheme.shapes.medium,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
+    ) {
+        Row(Modifier.padding(Spacing.md)) {
+            RulerPortrait(
+                imageUrl = ruler.imageUrl,
+                name = ruler.name,
+                width = 64.dp
+            )
+            Spacer(Modifier.width(Spacing.md))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = ruler.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                val reign = yearRange(ruler.periodStart, ruler.periodEnd)
+                if (reign.isNotEmpty()) {
+                    Text(
+                        text = reign,
+                        style = tabular(MaterialTheme.typography.labelLarge),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+                if (!ruler.description.isNullOrBlank()) {
+                    Spacer(Modifier.height(Spacing.xs))
+                    Text(
+                        text = ruler.description,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                if (ruler.coinsCount > 0) {
+                    Spacer(Modifier.height(Spacing.xs))
+                    Text(
+                        text = stringResource(R.string.catalog_coins_count, ruler.coinsCount),
+                        style = tabular(MaterialTheme.typography.labelSmall),
+                        color = MaterialTheme.colorScheme.outline
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * The ruler's own screen, which used to be a bare five-row list of metal
+ * names with the ruler reduced to a title-bar string.
+ *
+ * The portrait is a card, not a full-bleed header: the backend's portraits are
+ * 250px wide, and stretching one across a 1080px screen would be visibly soft.
+ * When larger originals land at the same URLs this layout only gets sharper.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun RulerScreen(navController: NavController, rulerId: String) {
+    val repository = remember { CatalogRepository() }
+    var ruler by remember { mutableStateOf<RulerResponse?>(null) }
+    val coins = remember { mutableStateListOf<CoinResponse>() }
+    var isLoading by remember { mutableStateOf(true) }
+    var descriptionExpanded by rememberSaveable { mutableStateOf(false) }
+
+    LaunchedEffect(rulerId) {
+        val id = rulerId.toIntOrNull()
+        if (id != null) {
+            repository.getRuler(id).onSuccess { ruler = it }
+            // Paged fetch: the per-metal counts must cover the whole catalog for
+            // this ruler, not just the first page.
+            repository.getCoins(rulerId = id).onSuccess {
+                coins.clear(); coins.addAll(it)
+            }
+        }
+        isLoading = false
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(ruler?.name ?: "", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, null)
+                    }
+                }
+            )
+        }
+    ) { padding ->
+        if (isLoading) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+        } else {
+            val current = ruler
+            LazyColumn(
+                modifier = Modifier.padding(padding),
+                contentPadding = PaddingValues(Spacing.lg),
+                verticalArrangement = Arrangement.spacedBy(Spacing.md)
+            ) {
+                if (current != null) {
+                    item {
+                        Row {
+                            RulerPortrait(
+                                imageUrl = current.imageUrl,
+                                name = current.name,
+                                width = 108.dp
+                            )
+                            Spacer(Modifier.width(Spacing.lg))
+                            Column(Modifier.weight(1f)) {
+                                if (!current.countryName.isNullOrBlank()) {
+                                    Text(
+                                        text = current.countryName.uppercase(),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                Text(current.name, style = MaterialTheme.typography.headlineSmall)
+                                val reign = yearRange(current.periodStart, current.periodEnd)
+                                if (reign.isNotEmpty()) {
+                                    Text(
+                                        text = reign,
+                                        style = tabular(MaterialTheme.typography.titleMedium),
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                                if (coins.isNotEmpty()) {
+                                    Spacer(Modifier.height(Spacing.xs))
+                                    Text(
+                                        text = stringResource(R.string.catalog_coins_count, coins.size),
+                                        style = tabular(MaterialTheme.typography.bodySmall),
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
                             }
                         }
+                    }
+
+                    // The backend now returns 3-5 sentences here, so this can't
+                    // assume a single line - it collapses to four and expands.
+                    if (!current.description.isNullOrBlank()) {
+                        item {
+                            Column(Modifier.animateContentSize()) {
+                                Text(
+                                    text = current.description,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = if (descriptionExpanded) Int.MAX_VALUE else 4,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                TextButton(
+                                    onClick = { descriptionExpanded = !descriptionExpanded },
+                                    contentPadding = PaddingValues(vertical = Spacing.xs, horizontal = 0.dp)
+                                ) {
+                                    Text(
+                                        stringResource(
+                                            if (descriptionExpanded) R.string.catalog_show_less
+                                            else R.string.catalog_show_more
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                item {
+                    Text(
+                        text = stringResource(R.string.catalog_browse_by_metal),
+                        style = MaterialTheme.typography.titleSmall
+                    )
+                }
+
+                // Category tiles carry their own count, so a dead end is visible
+                // before you tap it rather than after.
+                items(CATALOG_CATEGORY_KEYS.chunked(2)) { pair ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
+                        pair.forEach { key ->
+                            val count = coins.count { coinMatchesCategory(it.name, it.metalType, key) }
+                            MetalTile(
+                                categoryKey = key,
+                                label = categoryDisplayName(key),
+                                count = count,
+                                modifier = Modifier.weight(1f)
+                            ) { navController.navigate("coins/$rulerId/$key") }
+                        }
+                        if (pair.size == 1) Spacer(Modifier.weight(1f))
                     }
                 }
             }
@@ -342,23 +620,32 @@ fun RulerListScreen(navController: NavController, periodId: String, periodName: 
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CategoryListScreen(navController: NavController, rulerId: String, rulerName: String) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(rulerName) },
-                navigationIcon = { IconButton(onClick = { navController.popBackStack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) } }
-            )
-        }
-    ) { padding ->
-        LazyColumn(modifier = Modifier.padding(padding)) {
-            items(CATALOG_CATEGORY_KEYS) { categoryKey ->
-                ListItem(
-                    headlineContent = { Text(categoryDisplayName(categoryKey)) },
-                    trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) },
-                    modifier = Modifier.clickable { navController.navigate("coins/$rulerId/$categoryKey") }
+private fun MetalTile(
+    categoryKey: String,
+    label: String,
+    count: Int,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    val enabled = count > 0
+    Card(
+        modifier = modifier.clickable(enabled = enabled) { onClick() },
+        shape = MaterialTheme.shapes.medium,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
+    ) {
+        Row(
+            Modifier.padding(Spacing.md).graphicsLayer { alpha = if (enabled) 1f else 0.45f },
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            CoinDisc(imageUrl = null, metalType = categoryMetal(categoryKey), size = 28.dp)
+            Spacer(Modifier.width(Spacing.sm))
+            Column {
+                Text(label, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    text = stringResource(R.string.catalog_coins_count, count),
+                    style = tabular(MaterialTheme.typography.labelSmall),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
@@ -369,21 +656,22 @@ fun CategoryListScreen(navController: NavController, rulerId: String, rulerName:
 @Composable
 fun CoinListScreen(navController: NavController, rulerId: String, category: String) {
     val repository = remember { CatalogRepository() }
-    val denominations = remember { mutableStateListOf<String>() }
+    val denominations = remember { mutableStateListOf<Pair<String, Int>>() }
     var isLoading by remember { mutableStateOf(true) }
 
     LaunchedEffect(rulerId, category) {
         val rId = rulerId.toIntOrNull()
         if (rId != null) {
             repository.getCoins(rulerId = rId).onSuccess { result ->
-                val set = mutableSetOf<String>()
+                val counts = linkedMapOf<String, Int>()
                 for (coin in result) {
                     if (coinMatchesCategory(coin.name, coin.metalType, category)) {
-                        set.add(coin.denomination ?: coin.name)
+                        val key = coin.denomination ?: coin.name
+                        counts[key] = (counts[key] ?: 0) + 1
                     }
                 }
                 denominations.clear()
-                denominations.addAll(set.sorted())
+                denominations.addAll(counts.toList().sortedBy { it.first })
                 isLoading = false
             }.onFailure { isLoading = false }
         } else {
@@ -397,20 +685,47 @@ fun CoinListScreen(navController: NavController, rulerId: String, category: Stri
             navigationIcon = { IconButton(onClick = { navController.popBackStack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) } }
         )
     }) { padding ->
-        if (isLoading) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-        else if (denominations.isEmpty()) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(stringResource(R.string.catalog_no_denominations_found)) }
-        else LazyColumn(modifier = Modifier.padding(padding)) {
-            items(denominations) { den ->
-                ListItem(
-                    headlineContent = { Text(den) },
-                    trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) },
-                    modifier = Modifier.clickable { navController.navigate("coin_type/$rulerId/$category/$den") }
-                )
+        if (isLoading) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+        } else if (denominations.isEmpty()) {
+            EmptyState(
+                modifier = Modifier.padding(padding),
+                icon = Icons.Default.SearchOff,
+                title = stringResource(R.string.catalog_no_denominations_found),
+                message = stringResource(R.string.catalog_no_denominations_hint),
+                actionLabel = stringResource(R.string.catalog_back_to_metals),
+                onAction = { navController.popBackStack() }
+            )
+        } else {
+            LazyColumn(modifier = Modifier.padding(padding)) {
+                items(denominations) { (den, count) ->
+                    ListItem(
+                        headlineContent = { Text(den, style = MaterialTheme.typography.titleMedium) },
+                        supportingContent = {
+                            Text(
+                                text = stringResource(R.string.catalog_coins_count, count),
+                                style = tabular(MaterialTheme.typography.bodySmall),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        },
+                        leadingContent = { CoinDisc(imageUrl = null, metalType = categoryMetal(category), size = 36.dp) },
+                        trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.outline) },
+                        modifier = Modifier.clickable { navController.navigate("coin_type/$rulerId/$category/$den") }
+                    )
+                }
             }
         }
     }
 }
 
+/**
+ * All coins of one denomination.
+ *
+ * This screen used to render each coin as its raw Numista description - six
+ * lines of English catalogue prose beginning with the year, three coins to a
+ * screenful. The year is what people scan by, so it leads as a tabular figure;
+ * the prose moves to the coin's own screen, where there is room for it.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CoinTypeScreen(navController: NavController, rulerId: String, category: String, denomination: String) {
@@ -428,7 +743,6 @@ fun CoinTypeScreen(navController: NavController, rulerId: String, category: Stri
                 coins.clear()
                 for (coin in result) {
                     val currentDenomination = coin.denomination ?: coin.name
-                    
                     if (currentDenomination == denomination &&
                         coinMatchesCategory(coin.name, coin.metalType, category)
                     ) {
@@ -443,48 +757,87 @@ fun CoinTypeScreen(navController: NavController, rulerId: String, category: Stri
         }
     }
 
-    Scaffold(topBar = { 
+    Scaffold(topBar = {
         TopAppBar(
-            title = { Text(denomination) }, 
+            title = { Text(denomination, maxLines = 1, overflow = TextOverflow.Ellipsis) },
             navigationIcon = { IconButton(onClick = { navController.popBackStack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) } }
-        ) 
+        )
     }) { padding ->
-        if (isLoading) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-        else Column(Modifier.padding(padding)) {
-            if (coins.isNotEmpty()) {
-                val first = coins[0]
-                SectionCard(Modifier.fillMaxWidth().padding(Spacing.sm)) {
-                        Text(stringResource(R.string.catalog_specifications), fontWeight = FontWeight.Bold)
-                        Text(stringResource(R.string.catalog_composition, localizedMetalType(first.metalType)))
-                        Text(stringResource(R.string.catalog_weight_diameter, first.weight.toString(), first.diameter.toString()))
-                        if (first.rarity.isNotEmpty()) {
-                            Text(stringResource(R.string.catalog_rarity_scale, localizedRarity(first.rarity)), color = MaterialTheme.colorScheme.primary)
-                        }
-                }
-            }
-            LazyColumn(Modifier.weight(1f)) {
+        if (isLoading) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+        } else if (coins.isEmpty()) {
+            EmptyState(
+                modifier = Modifier.padding(padding),
+                icon = Icons.Default.SearchOff,
+                title = stringResource(R.string.catalog_no_coins_title),
+                message = stringResource(R.string.catalog_no_coins_message),
+                actionLabel = stringResource(R.string.catalog_back_to_metals),
+                onAction = { navController.popBackStack() }
+            )
+        } else {
+            val addedText = stringResource(R.string.catalog_toast_added)
+            val errorTemplate = stringResource(R.string.catalog_toast_error)
+            LazyColumn(
+                modifier = Modifier.padding(padding),
+                contentPadding = PaddingValues(Spacing.lg),
+                verticalArrangement = Arrangement.spacedBy(Spacing.sm)
+            ) {
                 items(coins) { coin ->
-                    ListItem(
-                        headlineContent = { Text("${coin.year ?: ""} ${coin.description ?: ""}") },
-                        supportingContent = {
-                            Text(stringResource(R.string.catalog_rarity_label, localizedRarity(coin.rarity)))
-                        },
-                        trailingContent = {
-                    val addedText = stringResource(R.string.catalog_toast_added)
-                    val errorTemplate = stringResource(R.string.catalog_toast_error)
-                    IconButton(onClick = {
-                        scope.launch {
-                            collectionRepo.addCoinToCollection(coin.id, "UNC").onSuccess { _: UserCoinResponse ->
-                                Toast.makeText(context, addedText, Toast.LENGTH_SHORT).show()
-                            }.onFailure { e: Throwable ->
-                                Toast.makeText(context, String.format(errorTemplate, e.message), Toast.LENGTH_SHORT).show()
+                    CoinRowCard(
+                        coin = coin,
+                        onClick = { navController.navigate("coin_detail/${coin.id}") },
+                        onAdd = {
+                            scope.launch {
+                                collectionRepo.addCoinToCollection(coin.id, "UNC").onSuccess { _: UserCoinResponse ->
+                                    Toast.makeText(context, addedText, Toast.LENGTH_SHORT).show()
+                                }.onFailure { e: Throwable ->
+                                    Toast.makeText(context, String.format(errorTemplate, e.message), Toast.LENGTH_SHORT).show()
+                                }
                             }
                         }
-                    }) { Icon(Icons.Default.AddCircle, null, tint = MaterialTheme.colorScheme.primary) }
-                        },
-                        modifier = Modifier.clickable { navController.navigate("coin_detail/${coin.id}") }
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CoinRowCard(coin: CoinResponse, onClick: () -> Unit, onAdd: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth().clickable { onClick() },
+        shape = MaterialTheme.shapes.medium,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
+    ) {
+        Row(Modifier.padding(Spacing.md), verticalAlignment = Alignment.CenterVertically) {
+            CoinDisc(imageUrl = coin.imageUrl, metalType = coin.metalType, size = 52.dp)
+            Spacer(Modifier.width(Spacing.md))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = coin.year?.toString() ?: coin.denomination.orEmpty(),
+                    style = tabular(MaterialTheme.typography.titleLarge)
+                )
+                varietyOf(coin)?.let { variety ->
+                    Text(
+                        text = variety,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                Spacer(Modifier.height(Spacing.xs))
+                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                    coin.weight?.takeIf { it > 0 }?.let {
+                        FactChip(stringResource(R.string.catalog_value_grams, formatMeasure(it)))
+                    }
+                    if (isNotableRarity(coin.rarity)) {
+                        FactChip(localizedRarity(coin.rarity), emphasized = true)
+                    }
+                }
+            }
+            IconButton(onClick = onAdd) {
+                Icon(Icons.Default.AddCircle, contentDescription = stringResource(R.string.catalog_action_add_to_collection), tint = MaterialTheme.colorScheme.primary)
             }
         }
     }
@@ -502,6 +855,7 @@ fun CoinDetailScreen(navController: NavController, coinId: String) {
     var userCoinData by remember { mutableStateOf<UserCoinResponse?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var isUploading by remember { mutableStateOf(false) }
+    var descriptionExpanded by rememberSaveable { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -553,7 +907,7 @@ fun CoinDetailScreen(navController: NavController, coinId: String) {
         if (id != null) {
             repository.getCoin(id).onSuccess { coinResult: CoinResponse ->
                 coin = coinResult
-                
+
                 authRepository.getCurrentUser().onSuccess { _ ->
                     collectionRepo.getUserCoins().onSuccess { userCoins: List<UserCoinResponse> ->
                         val data = userCoins.find { it.coinId == id }
@@ -571,80 +925,168 @@ fun CoinDetailScreen(navController: NavController, coinId: String) {
         }
     }
 
+    val current = coin
+    // Title bar carries the short human name; the long raw catalogue string
+    // used to wrap to two lines in the app bar.
+    val shortTitle = current?.let { c ->
+        listOfNotNull(c.denomination ?: c.name, c.year?.toString()).joinToString(" ")
+    } ?: stringResource(R.string.catalog_details_title)
+
     Scaffold(
-        topBar = { TopAppBar(title = { Text(coin?.name ?: stringResource(R.string.catalog_details_title)) }, navigationIcon = { IconButton(onClick = { navController.popBackStack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) } }) },
+        topBar = {
+            TopAppBar(
+                title = { Text(shortTitle, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                navigationIcon = { IconButton(onClick = { navController.popBackStack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) } }
+            )
+        },
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
-        if (isLoading) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-        else if (coin != null) {
-            LazyColumn(modifier = Modifier.padding(padding).padding(16.dp)) {
+        if (isLoading) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+        } else if (current != null) {
+            LazyColumn(modifier = Modifier.padding(padding)) {
+                // The coin itself, finally. coins.image_url has been populated for
+                // 1863 of 2465 rows the whole time and no screen ever showed it.
+                item { CoinHero(imageUrl = current.imageUrl, metalType = current.metalType) }
+
                 item {
-                    Text(stringResource(R.string.catalog_characteristics), style = MaterialTheme.typography.titleLarge)
-                    InfoRow(stringResource(R.string.catalog_label_denomination), coin!!.denomination ?: "")
-                    InfoRow(stringResource(R.string.catalog_label_metal), localizedMetalType(coin!!.metalType))
-                    InfoRow(stringResource(R.string.catalog_label_year), coin!!.year?.toString() ?: "")
-                    InfoRow(stringResource(R.string.catalog_label_rarity), localizedRarity(coin!!.rarity))
-                    coin!!.series?.let { InfoRow(stringResource(R.string.catalog_label_series), it) }
-                    coin!!.rarityCode?.let { InfoRow(stringResource(R.string.catalog_label_rarity_code), it) }
-                    coin!!.mintageSpmd?.let { InfoRow(stringResource(R.string.catalog_label_mintage_spmd), it) }
-                    coin!!.mintageMmd?.let { InfoRow(stringResource(R.string.catalog_label_mintage_mmd), it) }
-                    coin!!.priceEstimate?.let { InfoRow(stringResource(R.string.catalog_label_estimated_price), it) }
-
-                    coin!!.description?.let { InfoRow(stringResource(R.string.catalog_label_description), it) }
-
-                    Spacer(Modifier.height(24.dp))
+                    Column(Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.md)) {
+                        val breadcrumb = listOfNotNull(current.countryName, current.rulerName).joinToString(" · ")
+                        if (breadcrumb.isNotEmpty()) {
+                            Text(
+                                text = breadcrumb.uppercase(),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Text(
+                            text = current.denomination ?: current.name,
+                            style = MaterialTheme.typography.headlineSmall
+                        )
+                        varietyOf(current)?.let { variety ->
+                            Text(
+                                text = variety,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
                 }
+
+                item {
+                    SpecGrid(
+                        specs = listOf(
+                            Spec(stringResource(R.string.catalog_label_year), current.year?.toString()),
+                            Spec(stringResource(R.string.catalog_label_metal), localizedMetalType(current.metalType)),
+                            Spec(stringResource(R.string.catalog_label_weight), current.weight?.takeIf { it > 0 }?.let { stringResource(R.string.catalog_value_grams, formatMeasure(it)) }),
+                            Spec(stringResource(R.string.catalog_label_diameter), current.diameter?.takeIf { it > 0 }?.let { stringResource(R.string.catalog_value_mm, formatMeasure(it)) }),
+                            Spec(stringResource(R.string.catalog_label_rarity), localizedRarity(current.rarity)),
+                            Spec(stringResource(R.string.catalog_label_rarity_code), current.rarityCode),
+                            Spec(stringResource(R.string.catalog_label_mintage_spmd), groupDigits(current.mintageSpmd)),
+                            Spec(stringResource(R.string.catalog_label_mintage_mmd), groupDigits(current.mintageMmd)),
+                            Spec(stringResource(R.string.catalog_label_series), current.series),
+                            Spec(stringResource(R.string.catalog_label_estimated_price), current.priceEstimate)
+                        ),
+                        modifier = Modifier.padding(horizontal = Spacing.lg)
+                    )
+                }
+
+                if (!current.description.isNullOrBlank()) {
+                    item {
+                        Column(Modifier.padding(Spacing.lg).animateContentSize()) {
+                            Text(
+                                text = stringResource(R.string.catalog_label_description),
+                                style = MaterialTheme.typography.titleSmall
+                            )
+                            Spacer(Modifier.height(Spacing.xs))
+                            Text(
+                                text = current.description,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = if (descriptionExpanded) Int.MAX_VALUE else 3,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            TextButton(
+                                onClick = { descriptionExpanded = !descriptionExpanded },
+                                contentPadding = PaddingValues(vertical = Spacing.xs, horizontal = 0.dp)
+                            ) {
+                                Text(
+                                    stringResource(
+                                        if (descriptionExpanded) R.string.catalog_show_less
+                                        else R.string.catalog_show_more
+                                    )
+                                )
+                            }
+                        }
+                    }
+                }
+
                 if (userCoinData != null) {
                     item {
-                        SectionCard(emphasis = SectionCardEmphasis.Brand) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(stringResource(R.string.catalog_your_coin), style = MaterialTheme.typography.titleMedium)
-                                    // if (!isUserPro) Icon(Icons.Default.Lock, null, Modifier.padding(start = 8.dp).size(18.dp))
+                        SectionCard(
+                            modifier = Modifier.padding(Spacing.lg),
+                            emphasis = SectionCardEmphasis.Brand
+                        ) {
+                            Text(stringResource(R.string.catalog_your_coin), style = MaterialTheme.typography.titleMedium)
+                            Spacer(Modifier.height(Spacing.sm))
+                            Box(
+                                Modifier.fillMaxWidth().height(200.dp)
+                                    .clip(MaterialTheme.shapes.medium)
+                                    .clickable(true) { launcher.launch("image/*") },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (isUploading) CircularProgressIndicator()
+                                else if (imageUrl != null) AsyncImage(model = imageUrl, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                                else Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Icon(Icons.Default.AddAPhoto, null, Modifier.size(32.dp))
+                                    Spacer(Modifier.height(Spacing.xs))
+                                    Text(
+                                        stringResource(R.string.catalog_add_your_photo),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        textAlign = TextAlign.Center
+                                    )
                                 }
-                                Box(Modifier.fillMaxWidth().height(200.dp).clip(MaterialTheme.shapes.medium).clickable(true) { launcher.launch("image/*") }, contentAlignment = Alignment.Center) {
-                                    if (isUploading) CircularProgressIndicator()
-                                    else if (imageUrl != null) AsyncImage(model = imageUrl, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-                                    else Icon(Icons.Default.Add, null, Modifier.size(48.dp))
-                                }
-                                Spacer(Modifier.height(16.dp))
-                                OutlinedTextField(value = noteText, onValueChange = { noteText = it }, label = { Text(stringResource(R.string.catalog_notes_label)) }, modifier = Modifier.fillMaxWidth())
-                                Button(onClick = {
-                                    val currentUserCoin = userCoinData ?: return@Button
-                                    scope.launch {
-                                        collectionRepo.updateUserCoin(currentUserCoin.id, UserCoinUpdate(notes = noteText)).onSuccess { updated ->
-                                            userCoinData = updated
-                                        }.onFailure { e ->
-                                            if (e is retrofit2.HttpException && e.code() == 403) handleVipGate()
-                                            else snackbarHostState.showSnackbar(saveFailedMsg)
-                                        }
+                            }
+                            Spacer(Modifier.height(Spacing.lg))
+                            OutlinedTextField(value = noteText, onValueChange = { noteText = it }, label = { Text(stringResource(R.string.catalog_notes_label)) }, modifier = Modifier.fillMaxWidth())
+                            Button(onClick = {
+                                val currentUserCoin = userCoinData ?: return@Button
+                                scope.launch {
+                                    collectionRepo.updateUserCoin(currentUserCoin.id, UserCoinUpdate(notes = noteText)).onSuccess { updated ->
+                                        userCoinData = updated
+                                    }.onFailure { e ->
+                                        if (e is retrofit2.HttpException && e.code() == 403) handleVipGate()
+                                        else snackbarHostState.showSnackbar(saveFailedMsg)
                                     }
-                                }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) { Text(stringResource(R.string.common_save)) }
+                                }
+                            }, modifier = Modifier.fillMaxWidth().padding(top = Spacing.sm)) { Text(stringResource(R.string.common_save)) }
                         }
                     }
                 } else {
                     item {
-                        Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(
+                            Modifier.fillMaxWidth().padding(Spacing.lg),
+                            horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
+                        ) {
                             Button(onClick = {
                                 scope.launch {
-                                    collectionRepo.addCoinToCollection(coin!!.id, "UNC", status = "owned")
+                                    collectionRepo.addCoinToCollection(current.id, "UNC", status = "owned")
                                         .onSuccess { userCoinData = it }
                                         .onFailure { snackbarHostState.showSnackbar(saveFailedMsg) }
                                 }
                             }, modifier = Modifier.weight(1f)) {
-                                Icon(Icons.Default.AddCircle, null)
-                                Spacer(Modifier.width(4.dp))
-                                Text(stringResource(R.string.catalog_action_add_to_collection))
+                                Text(stringResource(R.string.catalog_action_own), maxLines = 1)
                             }
                             OutlinedButton(onClick = {
                                 scope.launch {
-                                    collectionRepo.addCoinToCollection(coin!!.id, "UNC", status = "wishlist")
+                                    collectionRepo.addCoinToCollection(current.id, "UNC", status = "wishlist")
                                         .onSuccess { userCoinData = it }
                                         .onFailure { snackbarHostState.showSnackbar(saveFailedMsg) }
                                 }
                             }, modifier = Modifier.weight(1f)) {
-                                Icon(Icons.Default.FavoriteBorder, null)
-                                Spacer(Modifier.width(4.dp))
-                                Text(stringResource(R.string.catalog_action_add_to_wishlist))
+                                Icon(Icons.Default.FavoriteBorder, null, Modifier.size(18.dp))
+                                Spacer(Modifier.width(Spacing.xs))
+                                Text(stringResource(R.string.catalog_action_want), maxLines = 1)
                             }
                         }
                     }

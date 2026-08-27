@@ -16,13 +16,10 @@
     <!-- Home screen -->
     <string name="home_title">Home</string>
     <string name="home_search_placeholder">Search any coin</string>
-    <string name="home_stories_banner_title">See what your community is up to</string>
-    <string name="home_stories_banner_subtitle">Browse the catalog to discover coins worth collecting.</string>
     <string name="home_your_collection">Your Collection</string>
     <string name="home_your_wishlist">Your Wishlist</string>
-    <string name="home_empty_collection_hint">Add coins to see them here</string>
-    <string name="home_empty_wishlist_hint">Add coins to your wishlist to see them here</string>
     <string name="home_news_title">News</string>
+    <string name="home_see_all">See all</string>
 
     <!-- Catalog screens -->
     <string name="catalog_title">Catalog</string>
@@ -142,4 +139,47 @@
     <string name="collection_unknown_coin">Unknown Coin</string>
     <string name="collection_note_prefix">Note: %1$s</string>
     <string name="collection_price_rub">%1$s RUB</string>
+
+    <!-- Catalog: browsing chrome -->
+    <string name="catalog_year_range">%1$d — %2$d</string>
+    <string name="catalog_year_since">since %1$d</string>
+    <string name="catalog_periods_count">Periods: %1$d</string>
+    <string name="catalog_rulers_count">Rulers: %1$d</string>
+    <string name="catalog_coins_count">Coins: %1$d</string>
+    <string name="catalog_browse_by_metal">Browse by metal</string>
+    <string name="catalog_show_more">More</string>
+    <string name="catalog_show_less">Collapse</string>
+    <!-- Catalog: empty states -->
+    <string name="catalog_country_not_found_hint">Try a different spelling. We log what people look for and add missing countries.</string>
+    <string name="catalog_no_rulers_title">No rulers yet</string>
+    <string name="catalog_no_rulers_message">This period has no rulers in the catalog yet.</string>
+    <string name="catalog_no_denominations_hint">This ruler has no coins of this metal in the catalog. Try another metal.</string>
+    <string name="catalog_back_to_metals">Back to metals</string>
+    <string name="catalog_no_coins_title">No coins of this denomination</string>
+    <string name="catalog_no_coins_message">Nothing matched this denomination and metal.</string>
+    <!-- Catalog: coin detail -->
+    <string name="catalog_label_weight">Weight</string>
+    <string name="catalog_label_diameter">Diameter</string>
+    <string name="catalog_value_grams">%1$s g</string>
+    <string name="catalog_value_mm">%1$s mm</string>
+    <string name="catalog_add_your_photo">Add your photo</string>
+    <!-- Collection -->
+    <string name="collection_stat_coins">Coins</string>
+    <string name="collection_stat_rulers">Rulers</string>
+    <string name="collection_stat_spent">Spent</string>
+    <string name="collection_stat_value_rub">%1$s ₽</string>
+    <string name="collection_empty_message">Coins you add from the catalog appear here, with your own photos and notes.</string>
+    <string name="collection_wishlist_empty_message">Mark coins you are hunting for and they will be waiting here.</string>
+    <string name="collection_empty_action">Open catalog</string>
+    <!-- PRO comparison -->
+    <string name="pro_one_time_purchase">499 ₽ once. No subscription.</string>
+    <string name="pro_row_catalog">Full catalog</string>
+    <string name="pro_row_collection">Your collection</string>
+    <string name="pro_row_wishlist">Wishlist</string>
+    <string name="pro_column_free">Free</string>
+    <string name="pro_column_pro">PRO</string>
+    <string name="pro_included">Included</string>
+    <string name="pro_activate_button">Get PRO</string>
+    <string name="catalog_action_own">In collection</string>
+    <string name="catalog_action_want">Want it</string>
 </resources>
