@@ -133,6 +133,15 @@ data class CoinResponse(
     @SerializedName("metal_type") val metalType: String,
     val denomination: String?,
     val year: Int?,
+    // The last year of striking, for rows that stand for a whole type rather
+    // than for one year. The catalog holds both shapes: the Empire's gold is
+    // one row per year, while the silver rouble of Nicholas II is a single row
+    // covering 1895-1915. Showing only `year` turned that one into "1895" and
+    // the twenty years behind it vanished - a reader had every reason to
+    // believe the catalog held a single 1895 coin. Null for a one-year row,
+    // and null everywhere until the column ships, so the screens fall back to
+    // the plain year on their own.
+    @SerializedName("year_end") val yearEnd: Int? = null,
     val weight: Double?,
     val diameter: Double?,
     val description: String?,

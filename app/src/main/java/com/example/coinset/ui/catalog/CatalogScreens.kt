@@ -135,7 +135,18 @@ private fun isNotableRarity(rarity: String) = rarity.lowercase() !in setOf("", "
  * every single row, which distinguished nothing - two 1682 dengas looked
  * identical. Strips the denomination prefix and keeps the rest.
  */
-private fun varietyOf(coin: CoinResponse): String? {
+private fun varietyOf(coin: CoinResponse): String? = rawVarietyOf(coin)?.let(::ltrIsolate)
+
+/**
+ * The variety text before it is isolated for display.
+ *
+ * Isolation belongs on the way out, not inside the parsing: catalog variety
+ * names are Russian or English prose that always runs left to right, and in a
+ * Hebrew paragraph a leading digit is bidi-neutral, so «300-летие дома
+ * Романовых» came out on screen as «летие дома Романовых-300» - a name that
+ * does not exist, presented as if it did.
+ */
+private fun rawVarietyOf(coin: CoinResponse): String? {
     val name = coin.name.trim()
     // Numista separates denomination from variety with " - ". Matching on the
     // separator rather than on the denomination string is what works here:
@@ -149,9 +160,50 @@ private fun varietyOf(coin: CoinResponse): String? {
     if (!denomination.isNullOrEmpty() && name.startsWith(denomination, ignoreCase = true)) {
         return name.removeRange(0, denomination.length).trimStart(' ', '-', '–', '—')
             .let(::stripMintMasterSuffix)
+            .let { if (coin.yearEnd != null) stripLeadingYears(it) else it }
+            .let { stripRepeatedYear(it, coin.year) }
             .ifBlank { null }
     }
     return coin.series
+}
+
+// The years a catalog name opens with once the denomination is gone:
+// "1895–1915", "1749, 1751", "1756". Anchored, and only two- to four-digit
+// runs, so "1756 («для дворцового обихода»)" loses the date and keeps the
+// part that actually names the variety.
+private val LEADING_YEARS = Regex("^\\d{4}\\s*(?:[–—-]\\s*\\d{2,4})?(?:\\s*,\\s*\\d{4})*\\s*")
+
+/**
+ * Removes the run of years a name begins with - but only when the screen is
+ * already showing that range beside it.
+ *
+ * "Рубль 1895–1915" leaves "1895–1915" as its variety line, which is exactly
+ * right while the headline can only say "1895". The moment `year_end` arrives
+ * and the headline says "1895–1915" itself, the same line becomes the same
+ * fact printed twice. Hence the caller's `yearEnd != null` guard: before the
+ * column ships, the range stays visible here; after, it moves up to the
+ * headline where it belongs and this line keeps only what is left -
+ * "(«масонский орёл»)", "(портрет Б. Скотта)".
+ */
+private fun stripLeadingYears(text: String): String =
+    LEADING_YEARS.replaceFirst(text.trim(), "").trim()
+
+/**
+ * Drops a trailing year that only repeats the one already in the headline.
+ *
+ * The commemorative roubles are named the other way round - "«На коронацию
+ * Николая II» 1896" - so the year sits at the end, under a headline that
+ * already says 1896 in twice the size. Only an exact match of the coin's own
+ * year is removed: a year that is part of what the coin commemorates ("«В
+ * память 100-летия Отечественной войны 1812 года»") is the subject of the
+ * legend, not a repeat of the date, and stays.
+ */
+private fun stripRepeatedYear(text: String, year: Int?): String {
+    if (year == null) return text
+    val trimmed = text.trim()
+    val suffix = year.toString()
+    if (!trimmed.endsWith(suffix)) return trimmed
+    return trimmed.dropLast(suffix.length).trimEnd(' ', ',', '-', '–', '—')
 }
 
 // The mint master's initials as they are punched on the die: one to three
@@ -236,6 +288,31 @@ private fun yearRange(start: Int, end: Int?): String = when {
     end == null || end <= 0 -> stringResource(R.string.catalog_year_since, start)
     end == start -> start.toString()
     else -> ltrIsolate(stringResource(R.string.catalog_year_range, start, end))
+}
+
+/**
+ * The years a coin was struck: "1895–1915" for a row that stands for a type,
+ * "1755" for a row that stands for one year.
+ *
+ * A period's range and a coin's range are not the same typographic thing. A
+ * reign is prose - "1741 — 1761", spaced, read as a sentence. A striking range
+ * is part of the coin's name as the catalogues print it - "Рубль 1895–1915",
+ * tight en dash, no spaces - so it gets its own format string rather than
+ * borrowing the reign's.
+ *
+ * Isolated left-to-right: in Hebrew the digits and the dash are all
+ * bidi-neutral, and an unisolated range comes out as "1915–1895", which is not
+ * an ugly range but a false one.
+ */
+@Composable
+private fun coinYears(coin: CoinResponse): String? {
+    val start = coin.year ?: return null
+    val end = coin.yearEnd
+    return if (end != null && end > start) {
+        ltrIsolate(stringResource(R.string.catalog_coin_year_range, start, end))
+    } else {
+        start.toString()
+    }
 }
 
 /**
@@ -915,7 +992,11 @@ private fun CoinRowCard(coin: CoinResponse, onClick: () -> Unit, onAdd: () -> Un
                 // year, not below it among the chips.
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = coin.year?.toString() ?: coin.denomination.orEmpty(),
+                        // The whole striking range, not its first year: two
+                        // rows reading "1895" and "1897" look like two coins,
+                        // but "1895–1915" and "1897" say plainly that one of
+                        // them stands for twenty years of the same type.
+                        text = coinYears(coin) ?: coin.denomination.orEmpty(),
                         style = tabular(MaterialTheme.typography.titleLarge)
                     )
                     mintMasterOf(coin)?.let { initials ->
@@ -1035,7 +1116,7 @@ fun CoinDetailScreen(navController: NavController, coinId: String) {
     // Title bar carries the short human name; the long raw catalogue string
     // used to wrap to two lines in the app bar.
     val shortTitle = current?.let { c ->
-        listOfNotNull(c.denomination ?: c.name, c.year?.toString()).joinToString(" ")
+        listOfNotNull(c.denomination ?: c.name, coinYears(c)).joinToString(" ")
     } ?: stringResource(R.string.catalog_details_title)
 
     Scaffold(
@@ -1094,7 +1175,18 @@ fun CoinDetailScreen(navController: NavController, coinId: String) {
                 item {
                     SpecGrid(
                         specs = listOf(
-                            Spec(stringResource(R.string.catalog_label_year), current.year?.toString()),
+                            // The caption changes with the value: one year is
+                            // a year, a run of years is not, and labelling
+                            // "1895–1915" as "Год" would contradict itself on
+                            // the same line.
+                            Spec(
+                                label = stringResource(
+                                    if (current.yearEnd != null && current.yearEnd > (current.year ?: 0))
+                                        R.string.catalog_label_years_struck
+                                    else R.string.catalog_label_year
+                                ),
+                                value = coinYears(current)
+                            ),
                             Spec(stringResource(R.string.catalog_label_metal), localizedMetalType(current.metalType)),
                             Spec(stringResource(R.string.catalog_label_weight), current.weight?.takeIf { it > 0 }?.let { stringResource(R.string.catalog_value_grams, formatMeasure(it)) }),
                             Spec(stringResource(R.string.catalog_label_diameter), current.diameter?.takeIf { it > 0 }?.let { stringResource(R.string.catalog_value_mm, formatMeasure(it)) }),

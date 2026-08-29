@@ -55,6 +55,7 @@
     <string name="catalog_label_denomination">ערך נקוב</string>
     <string name="catalog_label_metal">מתכת</string>
     <string name="catalog_label_year">שנה</string>
+    <string name="catalog_label_years_struck">שנות הטבעה</string>
     <string name="catalog_label_rarity">נדירות</string>
     <string name="catalog_label_series">סדרה</string>
     <string name="catalog_label_rarity_code">קוד נדירות</string>
@@ -148,6 +149,7 @@
 
     <!-- catalog -->
     <string name="catalog_year_range">%1$d — %2$d</string>
+    <string name="catalog_coin_year_range">%1$d–%2$d</string>
     <string name="catalog_year_since">מ־%1$d</string>
     <string name="catalog_periods_count">תקופות: %1$d</string>
     <string name="catalog_rulers_count">שליטים: %1$d</string>
