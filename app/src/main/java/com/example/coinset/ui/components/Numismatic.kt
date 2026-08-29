@@ -2,6 +2,7 @@ package com.example.coinset.ui.components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
@@ -127,6 +128,83 @@ fun CoinHero(
             size = height - Spacing.xxxl * 2
         )
     }
+}
+
+// -------------------------------------------------------------- era emblem
+
+/**
+ * A historical era, drawn as its own flag in a circle.
+ *
+ * The period picker used to be three identical grey slabs carrying the same
+ * generic clock glyph, where the only thing separating the Empire from the
+ * USSR was a pair of dates. A flag is what people actually recognise an era
+ * by, and a circle is the shape this app already speaks in - the ruler
+ * avatars, the coin disc, the metal tiles.
+ *
+ * A flag is a wide rectangle, so it is cropped rather than fitted: the
+ * horizontal bands that carry a tricolour's identity survive a centre crop
+ * intact, while fitting would leave the flag as a thin strip floating in a
+ * circle of background.
+ *
+ * Two things the ring is doing, not decoration: the imperial and the modern
+ * Russian flags both contain a white band, and without a border they would
+ * bleed into a light background and lose their edge; and the same ring, drawn
+ * around the fallback, keeps a flagless era exactly the same shape and size as
+ * a flagged one, so a half-populated screen still reads as one row of circles.
+ */
+@Composable
+fun EraEmblem(
+    imageUrl: String?,
+    name: String,
+    modifier: Modifier = Modifier,
+    size: Dp = 104.dp
+) {
+    Box(
+        modifier = modifier
+            .size(size)
+            .clip(CircleShape)
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape),
+        contentAlignment = Alignment.Center
+    ) {
+        // The monogram is drawn first and the flag over it, rather than one or
+        // the other. A missing flag and a flag that failed to load look the
+        // same to the reader and deserve the same answer: this way the circle
+        // is never an empty disc, whether the URL is absent, still loading, or
+        // pointing at a file that isn't there.
+        Text(
+            text = eraMonogram(name),
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1
+        )
+        if (!imageUrl.isNullOrBlank()) {
+            AsyncImage(
+                model = imageUrl,
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+        }
+    }
+}
+
+/**
+ * "Российская Империя" -> "РИ", "СССР" -> "СССР", "Weimar Republic" -> "WR".
+ *
+ * A single word is kept whole when it is short, because an acronym is already
+ * the name people use - reducing "СССР" to "С" would be worse than useless.
+ * Multi-word names collapse to initials, which is what makes the Empire and
+ * the Federation tell each other apart at a glance.
+ */
+private fun eraMonogram(name: String): String {
+    val words = name.trim().split(' ', '-', '–').filter { it.isNotBlank() }
+    if (words.isEmpty()) return "?"
+    if (words.size == 1) {
+        val only = words[0]
+        return if (only.length <= 4) only.uppercase() else only.take(2).uppercase()
+    }
+    return words.take(3).joinToString("") { it.take(1).uppercase() }
 }
 
 // ----------------------------------------------------------- ruler portrait

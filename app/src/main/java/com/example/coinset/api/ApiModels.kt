@@ -46,6 +46,14 @@ data class CountrySearchMissRequest(
     @SerializedName("search_query") val searchQuery: String
 )
 
+/**
+ * imageUrl is the era's own historical flag - the imperial black-yellow-white,
+ * the Soviet red banner, the modern tricolour - served as an absolute URL from
+ * our server, same shape as Coin.image_url. It is null until those files are
+ * in place, and null for most countries after that, so the period picker never
+ * assumes it: an era with no flag falls back to a monogram disc of the same
+ * size and the row of circles stays a row of circles.
+ */
 data class PeriodResponse(
     val id: Int,
     @SerializedName("country_id") val countryId: Int,
@@ -54,6 +62,7 @@ data class PeriodResponse(
     @SerializedName("period_start") val periodStart: Int,
     @SerializedName("period_end") val periodEnd: Int?,
     val description: String?,
+    @SerializedName("image_url") val imageUrl: String? = null,
     @SerializedName("created_at") val createdAt: String,
     @SerializedName("country_name") val countryName: String?,
     @SerializedName("rulers_count") val rulersCount: Int = 0
@@ -67,6 +76,7 @@ data class PeriodWithRulers(
     @SerializedName("period_start") val periodStart: Int,
     @SerializedName("period_end") val periodEnd: Int?,
     val description: String?,
+    @SerializedName("image_url") val imageUrl: String? = null,
     @SerializedName("created_at") val createdAt: String,
     @SerializedName("country_name") val countryName: String?,
     @SerializedName("rulers_count") val rulersCount: Int = 0,

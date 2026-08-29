@@ -10,6 +10,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -32,6 +35,7 @@ import coil.compose.AsyncImage
 import com.example.coinset.R
 import com.example.coinset.api.*
 import com.example.coinset.ui.components.*
+import com.example.coinset.ui.theme.Dimens
 import com.example.coinset.ui.theme.Spacing
 import com.example.coinset.ui.theme.tabular
 import kotlinx.coroutines.Dispatchers
@@ -376,43 +380,76 @@ fun PeriodListScreen(navController: NavController, countryId: String, countryNam
         if (isLoading) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
         } else {
-            LazyColumn(
+            // Eras as flags, not as rows.
+            //
+            // Three identical grey slabs with the same clock glyph told you
+            // nothing: the Empire, the USSR and the Federation were separated
+            // only by their dates, so the screen read as a table of numbers
+            // rather than as a choice between three worlds. A flag is what
+            // people actually recognise an era by.
+            //
+            // The dates stay. They are the signpost that says which way you
+            // are walking - "1721-1917" is how you know the Empire is where
+            // the silver roubles live - so they sit under the flag as the
+            // second line, demoted rather than deleted.
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
                 modifier = Modifier.padding(padding),
                 contentPadding = PaddingValues(Spacing.lg),
-                verticalArrangement = Arrangement.spacedBy(Spacing.sm)
+                horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+                verticalArrangement = Arrangement.spacedBy(Spacing.xl)
             ) {
-                items(periods) { period ->
-                    Card(
-                        modifier = Modifier.fillMaxWidth()
-                            .clickable { navController.navigate("rulers/${period.id}/${period.name}") },
-                        shape = MaterialTheme.shapes.medium,
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
-                    ) {
-                        Row(Modifier.padding(Spacing.md), verticalAlignment = Alignment.CenterVertically) {
-                            Surface(Modifier.size(48.dp), shape = MaterialTheme.shapes.small, color = MaterialTheme.colorScheme.surfaceContainerHighest) {
-                                Icon(Icons.Default.History, null, Modifier.padding(Spacing.md), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                            Spacer(Modifier.width(Spacing.md))
-                            Column(Modifier.weight(1f)) {
-                                Text(period.name, style = MaterialTheme.typography.titleMedium)
-                                Text(
-                                    text = yearRange(period.periodStart, period.periodEnd),
-                                    style = tabular(MaterialTheme.typography.bodyMedium),
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                                if (period.rulersCount > 0) {
-                                    Text(
-                                        text = stringResource(R.string.catalog_rulers_count, period.rulersCount),
-                                        style = tabular(MaterialTheme.typography.labelSmall),
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
-                            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.outline)
-                        }
-                    }
+                items(periods, key = { it.id }) { period ->
+                    EraCell(
+                        period = period,
+                        onClick = { navController.navigate("rulers/${period.id}/${period.name}") }
+                    )
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun EraCell(period: PeriodResponse, onClick: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.medium)
+            .clickable { onClick() }
+            .padding(vertical = Spacing.sm),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        EraEmblem(
+            imageUrl = period.imageUrl,
+            name = period.name,
+            size = Dimens.periodFlag
+        )
+        Spacer(Modifier.height(Spacing.md))
+        Text(
+            text = period.name,
+            style = MaterialTheme.typography.titleMedium,
+            textAlign = TextAlign.Center,
+            // Wraps rather than truncates. Reserving a second line for every
+            // name would line the dates up across a row, but it costs a blank
+            // line under every single-line name on every screen - a permanent
+            // gap to fix an occasional one - and cutting a long era name
+            // ("Британский мандат Палестины") to an ellipsis would be worse
+            // than either.
+            maxLines = 3,
+            overflow = TextOverflow.Ellipsis
+        )
+        Text(
+            text = yearRange(period.periodStart, period.periodEnd),
+            style = tabular(MaterialTheme.typography.bodyMedium),
+            color = MaterialTheme.colorScheme.primary
+        )
+        if (period.rulersCount > 0) {
+            Text(
+                text = stringResource(R.string.catalog_rulers_count, period.rulersCount),
+                style = tabular(MaterialTheme.typography.labelSmall),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }

@@ -39,6 +39,9 @@ object Dimens {
     /** Minimum height of a tappable settings row - the Material touch target. */
     val settingsRowMin: Dp = 56.dp
 
+    /** Diameter of the flag disc on the period picker. */
+    val periodFlag: Dp = 104.dp
+
     val badgeHorizontalPadding: Dp = 8.dp
     val badgeVerticalPadding: Dp = 4.dp
 
