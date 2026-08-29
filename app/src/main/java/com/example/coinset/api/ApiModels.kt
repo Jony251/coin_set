@@ -33,13 +33,20 @@ data class UserResponse(
 )
 
 // Catalog Models
+/**
+ * periods arrives only with ?include=periods, and the backend then *replaces*
+ * periods_count with the list itself rather than sending both - so a country
+ * fetched without the include has an empty list and a zero count, and any
+ * screen reading one has to cope with the other being absent.
+ */
 data class CountryResponse(
     val id: Int,
     val name: String,
     val code: String,
     val description: String?,
     @SerializedName("created_at") val createdAt: String,
-    @SerializedName("periods_count") val periodsCount: Int = 0
+    @SerializedName("periods_count") val periodsCount: Int = 0,
+    val periods: List<PeriodResponse> = emptyList()
 )
 
 data class CountrySearchMissRequest(

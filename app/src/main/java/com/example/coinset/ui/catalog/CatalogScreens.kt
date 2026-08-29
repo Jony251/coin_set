@@ -327,7 +327,11 @@ fun CountryListScreen(navController: NavController) {
     var searchQuery by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
-        repository.getCountries().onSuccess { result ->
+        // include=periods so each row can show its eras as flags. It costs one
+        // request for the whole screen (the eras come nested), not one per
+        // country, and it is the same call the era list already makes on the
+        // next screen.
+        repository.getCountries(include = "periods").onSuccess { result ->
             countries.clear()
             countries.addAll(result)
             isLoading = false
@@ -385,10 +389,26 @@ fun CountryListScreen(navController: NavController) {
                     items(filteredCountries) { country ->
                         ListItem(
                             headlineContent = { Text(country.name, style = MaterialTheme.typography.titleMedium) },
-                            // Was the raw ISO code ("RU") - a database column shown to
-                            // the user where something useful belongs.
+                            // Was the raw ISO code ("RU"), then "Периодов: 3".
+                            // Both were the database talking: "период" is our
+                            // column name, and a reader has no way to know
+                            // whether three of them is a lot. The eras
+                            // themselves answer the question the counter was
+                            // dodging - which three.
+                            //
+                            // The counter survives only as the fallback for a
+                            // response that carried no nested periods, so the
+                            // row never silently loses its second line.
                             supportingContent = {
-                                if (country.periodsCount > 0) {
+                                if (country.periods.isNotEmpty()) {
+                                    EraFlagStrip(
+                                        eras = country.periods.map { EraChip(it.name, it.imageUrl) },
+                                        contentDescription = stringResource(
+                                            R.string.catalog_periods_count,
+                                            country.periods.size
+                                        )
+                                    )
+                                } else if (country.periodsCount > 0) {
                                     Text(
                                         text = stringResource(R.string.catalog_periods_count, country.periodsCount),
                                         style = tabular(MaterialTheme.typography.bodySmall),
