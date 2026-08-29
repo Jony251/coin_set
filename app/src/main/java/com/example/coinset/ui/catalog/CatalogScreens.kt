@@ -1069,8 +1069,14 @@ fun CoinDetailScreen(navController: NavController, coinId: String) {
                             Spec(stringResource(R.string.catalog_label_edge), localizedEdge(current.edge)),
                             Spec(stringResource(R.string.catalog_label_rarity), localizedRarity(current.rarity)),
                             Spec(stringResource(R.string.catalog_label_rarity_code), current.rarityCode),
-                            Spec(stringResource(R.string.catalog_label_mintage_spmd), groupDigits(current.mintageSpmd)),
-                            Spec(stringResource(R.string.catalog_label_mintage_mmd), groupDigits(current.mintageMmd)),
+                            // Where it was struck, then how many - the mint
+                            // first so the runs below it read as its output.
+                            // All four are empty outside the Russian Empire,
+                            // and SpecGrid closes up around them.
+                            Spec(stringResource(R.string.catalog_label_mint), current.mint),
+                            Spec(stringResource(R.string.catalog_label_mintage_spmd), mintageValue(current.mintageSpmd)),
+                            Spec(stringResource(R.string.catalog_label_mintage_mmd), mintageValue(current.mintageMmd)),
+                            Spec(stringResource(R.string.catalog_label_mintage_other), mintageValue(current.mintageOther)),
                             Spec(stringResource(R.string.catalog_label_series), current.series),
                             Spec(stringResource(R.string.catalog_label_estimated_price), current.priceEstimate)
                         ),

@@ -192,19 +192,56 @@ private fun monogramOf(name: String): String {
 data class Spec(val label: String, val value: String?)
 
 /**
+ * A spec value longer than this cannot sit in a half-width cell without either
+ * wrapping mid-number or being cut off, so it is given the whole row instead.
+ *
+ * The mintage columns are what forced this. They are not numbers but source
+ * text - "12,3 млн (1826–31)", "не менее 555 510 192 (1897–1917)" - and every
+ * word of it is load-bearing: "не менее" means a year with no surviving figures
+ * was left out of the sum, so it is an exact statement, not a hedge. An
+ * ellipsis there would turn a fact into a wrong fact, which is why the grid
+ * widens the cell rather than trimming the value.
+ */
+private const val WIDE_VALUE_CHARS = 16
+
+/** Same idea for the caption: a label that would ellipsize stops being a label. */
+private const val WIDE_LABEL_CHARS = 18
+
+/**
+ * Bidi isolates are invisible, so they must not count towards the width a
+ * value needs - otherwise an isolated value would jump to a full row two
+ * characters before an identical bare one.
+ */
+private fun visibleLength(text: String?): Int =
+    text?.count { !it.isBidiControl() } ?: 0
+
+// U+2066..U+2069 are the isolates, U+202A..U+202E the older embeddings.
+// Compared by code point rather than by character literal: these
+// characters are invisible, so a literal range reads as an empty string
+// in the source and the next person cannot tell what it covers.
+private fun Char.isBidiControl(): Boolean =
+    code in 0x2066..0x2069 || code in 0x202A..0x202E
+
+private val Spec.needsFullWidth: Boolean
+    get() = visibleLength(value) > WIDE_VALUE_CHARS || label.length > WIDE_LABEL_CHARS
+
+/**
  * Labelled numbers in a two-column grid with tabular figures, replacing the
  * run of full-width InfoRow lines where a value sat a whole screen-width
  * away from its own label.
  *
  * Specs whose value is missing are dropped rather than rendered - this is
- * what removes the literal "nullmm" that reached the screen.
+ * what removes the literal "nullmm" that reached the screen, and it is also
+ * what lets the same list of specs serve the Empire's gold (mint, edge,
+ * mintage and mint master all filled) and a coin from any other country
+ * (all four empty): the grid simply closes up around the gaps.
  */
 @Composable
 fun SpecGrid(specs: List<Spec>, modifier: Modifier = Modifier) {
     val present = specs.filter { !it.value.isNullOrBlank() }
     if (present.isEmpty()) return
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(1.dp)) {
-        present.chunked(2).forEach { row ->
+        packSpecs(present).forEach { row ->
             // IntrinsicSize.Min makes both cells in a row as tall as the taller
             // one, so a value that wraps to two lines doesn't leave its
             // neighbour floating at a different height.
@@ -212,11 +249,41 @@ fun SpecGrid(specs: List<Spec>, modifier: Modifier = Modifier) {
                 modifier = Modifier.height(IntrinsicSize.Min),
                 horizontalArrangement = Arrangement.spacedBy(1.dp)
             ) {
-                row.forEach { spec -> SpecCell(spec, Modifier.weight(1f).fillMaxHeight()) }
-                if (row.size == 1) Spacer(Modifier.weight(1f))
+                // A lone cell takes the whole row rather than sitting in half
+                // of one with a hole beside it: the block stays a clean
+                // rectangle, and a short value next to a long one no longer
+                // makes the grid look like it failed to load the other half.
+                row.forEach { spec ->
+                    SpecCell(spec, Modifier.weight(1f).fillMaxHeight())
+                }
             }
         }
     }
+}
+
+/**
+ * Lays the specs out into rows: two short ones side by side, a long one alone
+ * across the full width. Order is never rearranged to pack tighter - the
+ * sequence is the reading order of the coin (what it is, then what it is made
+ * of, then how many were made), and a gap is cheaper than a shuffled fact.
+ */
+private fun packSpecs(specs: List<Spec>): List<List<Spec>> {
+    val rows = mutableListOf<List<Spec>>()
+    var pending: Spec? = null
+    for (spec in specs) {
+        if (spec.needsFullWidth) {
+            pending?.let { rows += listOf(it) }
+            pending = null
+            rows += listOf(spec)
+        } else if (pending == null) {
+            pending = spec
+        } else {
+            rows += listOf(pending, spec)
+            pending = null
+        }
+    }
+    pending?.let { rows += listOf(it) }
+    return rows
 }
 
 @Composable
@@ -237,7 +304,10 @@ private fun SpecCell(spec: Spec, modifier: Modifier = Modifier) {
             Text(
                 text = spec.value.orEmpty(),
                 style = tabular(MaterialTheme.typography.titleSmall),
-                maxLines = 2,
+                // A full-width cell holds the longest value the column can
+                // store (50 characters) in two lines with room to spare, so
+                // three lines means nothing is ever actually cut there.
+                maxLines = if (spec.needsFullWidth) 3 else 2,
                 overflow = TextOverflow.Ellipsis
             )
         }
@@ -290,6 +360,22 @@ private const val LTR_ISOLATE = '⁦'
 private const val POP_DIRECTIONAL_ISOLATE = '⁩'
 
 fun ltrIsolate(text: String): String = LTR_ISOLATE + text + POP_DIRECTIONAL_ISOLATE
+
+/**
+ * A mintage figure, ready to drop into a spec cell in any language.
+ *
+ * A bare run of digits gets thousands separators; anything the source phrased
+ * itself - "12,3 млн (1826–31)", "не менее 555 510 192 (1897–1917)" - is left
+ * standing exactly as written. "не менее" in particular is an exact statement,
+ * not a hedge: the years with no surviving figures were left out of the sum, so
+ * rounding it or cutting it back to a number would print something untrue.
+ *
+ * The result is isolated left-to-right, because in Hebrew the digits, comma,
+ * dash and brackets are all bidi-neutral and the years in the trailing bracket
+ * would otherwise swap places, showing a range that never existed.
+ */
+fun mintageValue(raw: String?): String? =
+    groupDigits(raw)?.takeIf { it.isNotBlank() }?.let(::ltrIsolate)
 
 // ------------------------------------------------------------- empty state
 

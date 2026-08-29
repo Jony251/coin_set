@@ -58,8 +58,10 @@
     <string name="catalog_label_rarity">נדירות</string>
     <string name="catalog_label_series">סדרה</string>
     <string name="catalog_label_rarity_code">קוד נדירות</string>
+    <string name="catalog_label_mint">בית המטבעה</string>
     <string name="catalog_label_mintage_spmd">הטבעה (SPMD)</string>
     <string name="catalog_label_mintage_mmd">הטבעה (MMD)</string>
+    <string name="catalog_label_mintage_other">הטבעה (אחר)</string>
     <string name="catalog_label_estimated_price">מחיר משוער</string>
     <string name="catalog_label_description">תיאור</string>
     <string name="catalog_your_coin">המטבע שלך:</string>

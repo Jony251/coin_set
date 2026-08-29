@@ -54,8 +54,10 @@
     <string name="catalog_label_rarity">Редкость</string>
     <string name="catalog_label_series">Серия</string>
     <string name="catalog_label_rarity_code">Код редкости</string>
+    <string name="catalog_label_mint">Монетный двор</string>
     <string name="catalog_label_mintage_spmd">Тираж (СПМД)</string>
     <string name="catalog_label_mintage_mmd">Тираж (ММД)</string>
+    <string name="catalog_label_mintage_other">Тираж (иной двор)</string>
     <string name="catalog_label_estimated_price">Оценочная стоимость</string>
     <string name="catalog_label_description">Описание</string>
     <string name="catalog_your_coin">Ваша монета:</string>

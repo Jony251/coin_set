@@ -54,8 +54,10 @@
     <string name="catalog_label_rarity">Rarity</string>
     <string name="catalog_label_series">Series</string>
     <string name="catalog_label_rarity_code">Rarity Code</string>
+    <string name="catalog_label_mint">Mint</string>
     <string name="catalog_label_mintage_spmd">Mintage (SPMD)</string>
     <string name="catalog_label_mintage_mmd">Mintage (MMD)</string>
+    <string name="catalog_label_mintage_other">Mintage (other)</string>
     <string name="catalog_label_estimated_price">Estimated Price</string>
     <string name="catalog_label_description">Description</string>
     <string name="catalog_your_coin">Your Coin:</string>

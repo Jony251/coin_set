@@ -136,8 +136,18 @@ data class CoinResponse(
     val rarity: String,
     val series: String?,
     @SerializedName("rarity_code") val rarityCode: String?,
+    // Which mint struck the coin, plus its run. The mintage columns are free
+    // text, not numbers: the backend stores what the source actually says,
+    // which can be "12,3 млн (1826–31)" or "не менее 555 510 192 (1897–1917)".
+    // "не менее" is a precise claim - a year with no surviving figures was
+    // left out of the sum - so the UI must show it whole, never rounded or
+    // cut to a number. That is what makes these values long, and why the
+    // spec grid gives an over-long value the full width of the screen.
+    val mint: String?,
     @SerializedName("mintage_spmd") val mintageSpmd: String?,
     @SerializedName("mintage_mmd") val mintageMmd: String?,
+    // Run of a mint that has no column of its own (Yekaterinburg, Suzun).
+    @SerializedName("mintage_other") val mintageOther: String?,
     @SerializedName("price_estimate") val priceEstimate: String?,
     @SerializedName("created_at") val createdAt: String,
     @SerializedName("updated_at") val updatedAt: String,
