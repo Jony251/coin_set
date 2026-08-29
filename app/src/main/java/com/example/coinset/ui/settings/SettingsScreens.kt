@@ -8,8 +8,11 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Star
@@ -87,8 +90,25 @@ fun SettingsScreen(navController: NavController, rootNavController: NavControlle
     Scaffold(
         topBar = { TopAppBar(title = { Text(stringResource(R.string.settings_title)) }) }
     ) { padding ->
+        // The screen scrolls.
+        //
+        // It used to be a plain Column ending in Spacer(weight(1f)), which
+        // relies on everything fitting: a Column measures its unweighted
+        // children against the space left over, so once the avatar, the
+        // profile line and the PRO card had eaten the screen, the language
+        // card was measured against nothing and collapsed into a sliver with
+        // its own text cut through the middle - and the sign-out button below
+        // it disappeared entirely. That is what the user saw, and it needs no
+        // exotic device to reproduce: system font size one notch above default
+        // does it, and Hebrew or English wrap the feature list differently
+        // again. Content that grows with the user's own text settings has to
+        // be allowed to scroll rather than be silently squeezed.
         Column(
-            modifier = Modifier.fillMaxSize().padding(padding).padding(Spacing.lg),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .verticalScroll(rememberScrollState())
+                .padding(Spacing.lg),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             CollectorAvatar(displayName = user?.email, size = Dimens.avatarLarge)
@@ -141,20 +161,45 @@ fun SettingsScreen(navController: NavController, rootNavController: NavControlle
 
             Spacer(Modifier.height(Spacing.lg))
 
-            // Language Selector Card
+            // Language row.
+            //
+            // One tap target, not two: the row was both clickable and carried
+            // a TextButton, so the current language read as a button sitting
+            // next to a label rather than as the row's value. Now the label
+            // and the value are a caption-over-value pair like everywhere else
+            // in the app, and the chevron says the row leads somewhere.
+            //
+            // heightIn(min = ...) is the guarantee the old layout lacked: the
+            // row keeps its height no matter how little room is left.
             SectionCard(
                 modifier = Modifier.fillMaxWidth(),
                 contentPadding = PaddingValues(0.dp)
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(Spacing.lg).clickable { showLanguageDialog = true },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { showLanguageDialog = true }
+                        .heightIn(min = Dimens.settingsRowMin)
+                        .padding(horizontal = Spacing.lg, vertical = Spacing.md),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(text = stringResource(R.string.settings_language), fontWeight = FontWeight.Bold)
-                    TextButton(onClick = { showLanguageDialog = true }) {
-                        Text(currentLanguageLabel())
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            text = stringResource(R.string.settings_language),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = currentLanguageLabel(),
+                            style = MaterialTheme.typography.titleMedium
+                        )
                     }
+                    Icon(
+                        Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.outline
+                    )
                 }
             }
 
@@ -162,7 +207,7 @@ fun SettingsScreen(navController: NavController, rootNavController: NavControlle
                 LanguagePickerDialog(onDismiss = { showLanguageDialog = false })
             }
 
-            Spacer(Modifier.weight(1f))
+            Spacer(Modifier.height(Spacing.xxl))
 
             // Sign Out Button
             Button(
