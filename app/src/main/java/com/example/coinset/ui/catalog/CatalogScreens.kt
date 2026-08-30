@@ -327,11 +327,9 @@ fun CountryListScreen(navController: NavController) {
     var searchQuery by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
-        // include=periods so each row can show its eras as flags. It costs one
-        // request for the whole screen (the eras come nested), not one per
-        // country, and it is the same call the era list already makes on the
-        // next screen.
-        repository.getCountries(include = "periods").onSuccess { result ->
+        // No include: the row shows the country and nothing else, so the
+        // nested eras that the flag strip needed are no longer fetched.
+        repository.getCountries().onSuccess { result ->
             countries.clear()
             countries.addAll(result)
             isLoading = false
@@ -389,33 +387,16 @@ fun CountryListScreen(navController: NavController) {
                     items(filteredCountries) { country ->
                         ListItem(
                             headlineContent = { Text(country.name, style = MaterialTheme.typography.titleMedium) },
-                            // Was the raw ISO code ("RU"), then "Периодов: 3".
-                            // Both were the database talking: "период" is our
-                            // column name, and a reader has no way to know
-                            // whether three of them is a lot. The eras
-                            // themselves answer the question the counter was
-                            // dodging - which three.
-                            //
-                            // The counter survives only as the fallback for a
-                            // response that carried no nested periods, so the
-                            // row never silently loses its second line.
-                            supportingContent = {
-                                if (country.periods.isNotEmpty()) {
-                                    EraFlagStrip(
-                                        eras = country.periods.map { EraChip(it.name, it.imageUrl) },
-                                        contentDescription = stringResource(
-                                            R.string.catalog_periods_count,
-                                            country.periods.size
-                                        )
-                                    )
-                                } else if (country.periodsCount > 0) {
-                                    Text(
-                                        text = stringResource(R.string.catalog_periods_count, country.periodsCount),
-                                        style = tabular(MaterialTheme.typography.bodySmall),
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            },
+                            // No second line at all. It held the raw ISO code
+                            // ("RU"), then "Периодов: 3", then the eras as a
+                            // strip of small flags - and the flags turned out
+                            // to be the loudest thing on a screen whose job is
+                            // to let you pick a country. Saturated circles at
+                            // every row pulled the eye away from the names and
+                            // read as the subject of the page rather than as a
+                            // detail of it. The eras are one tap away and have
+                            // a screen of their own, where they are the
+                            // subject; here the country is.
                             leadingContent = { CountryFlag(code = country.code) },
                             trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.outline) },
                             modifier = Modifier.clickable {
