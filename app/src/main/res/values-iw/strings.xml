@@ -199,4 +199,10 @@
     <string name="pro_activate_button">קבלת PRO</string>
     <string name="catalog_action_own">לאוסף</string>
     <string name="catalog_action_want">רוצה</string>
+    <string name="common_cancel">ביטול</string>
+    <string name="catalog_action_remove_owned">הסרה מהאוסף</string>
+    <string name="catalog_action_remove_wishlist">הסרה מרשימת המשאלות</string>
+    <string name="catalog_remove_confirm_title">להסיר את המטבע?</string>
+    <string name="catalog_remove_confirm_text">המטבע יישאר בקטלוג. ההערה שלכם והתמונה שלכם יימחקו.</string>
+    <string name="catalog_notes_clear">ניקוי ההערה</string>
 </resources>

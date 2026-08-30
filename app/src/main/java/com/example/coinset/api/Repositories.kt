@@ -198,6 +198,24 @@ class CollectionRepository(private val api: CoinsetApi = RetrofitClient.api) {
             Result.failure(e)
         }
     }
+
+    /**
+     * Drops a coin from the collection or the wishlist.
+     *
+     * The endpoint answers 204 with no body, so success is the status code and
+     * nothing else; an unsuccessful one is surfaced rather than swallowed,
+     * because a delete that quietly failed would leave the row on screen gone
+     * and on the server intact.
+     */
+    suspend fun deleteUserCoin(id: Int): Result<Unit> {
+        return try {
+            val response = api.deleteUserCoin(id)
+            if (response.isSuccessful) Result.success(Unit)
+            else Result.failure(retrofit2.HttpException(response))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }
 
 class NewsRepository(private val api: CoinsetApi = RetrofitClient.api) {

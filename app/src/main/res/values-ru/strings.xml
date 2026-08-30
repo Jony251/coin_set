@@ -195,4 +195,10 @@
     <string name="pro_activate_button">Получить PRO</string>
     <string name="catalog_action_own">В коллекцию</string>
     <string name="catalog_action_want">Хочу купить</string>
+    <string name="common_cancel">Отмена</string>
+    <string name="catalog_action_remove_owned">Убрать из коллекции</string>
+    <string name="catalog_action_remove_wishlist">Убрать из списка желаний</string>
+    <string name="catalog_remove_confirm_title">Убрать монету?</string>
+    <string name="catalog_remove_confirm_text">Монета останется в каталоге. Ваша заметка и ваше фото этой монеты будут удалены.</string>
+    <string name="catalog_notes_clear">Очистить заметку</string>
 </resources>

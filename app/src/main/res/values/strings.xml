@@ -200,4 +200,10 @@
     <string name="pro_activate_button">Get PRO</string>
     <string name="catalog_action_own">In collection</string>
     <string name="catalog_action_want">Want it</string>
+    <string name="common_cancel">Cancel</string>
+    <string name="catalog_action_remove_owned">Remove from collection</string>
+    <string name="catalog_action_remove_wishlist">Remove from wishlist</string>
+    <string name="catalog_remove_confirm_title">Remove this coin?</string>
+    <string name="catalog_remove_confirm_text">The coin stays in the catalogue. Your note and your photo of it are deleted.</string>
+    <string name="catalog_notes_clear">Clear note</string>
 </resources>

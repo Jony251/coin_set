@@ -1105,6 +1105,10 @@ fun CoinDetailScreen(navController: NavController, coinId: String) {
     // (e.g. screen rotation) instead of being silently wiped.
     var noteText by rememberSaveable { mutableStateOf("") }
     var imageUrl by remember { mutableStateOf<String?>(null) }
+    // Removing a coin throws away a note and a photo that only exist here, so
+    // it asks first. rememberSaveable: a rotation with the dialog open should
+    // not silently answer the question.
+    var showRemoveDialog by rememberSaveable { mutableStateOf(false) }
 
     val vipRequiredMsg = stringResource(R.string.catalog_vip_feature_message)
     val upgradeActionLabel = stringResource(R.string.catalog_upgrade_action)
@@ -1173,6 +1177,56 @@ fun CoinDetailScreen(navController: NavController, coinId: String) {
     val shortTitle = current?.let { c ->
         listOfNotNull(c.denomination ?: c.name, coinYears(c)).joinToString(" ")
     } ?: stringResource(R.string.catalog_details_title)
+
+    if (showRemoveDialog) {
+        AlertDialog(
+            onDismissRequest = { showRemoveDialog = false },
+            title = { Text(stringResource(R.string.catalog_remove_confirm_title)) },
+            // Says what is actually lost. The coin is not being deleted - it
+            // stays in the catalogue and can be added back - but the note and
+            // the photograph are the user's own and do not come back.
+            text = { Text(stringResource(R.string.catalog_remove_confirm_text)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val current = userCoinData
+                        showRemoveDialog = false
+                        if (current != null) {
+                            scope.launch {
+                                collectionRepo.deleteUserCoin(current.id)
+                                    .onSuccess {
+                                        // The screen falls back to its "add to
+                                        // collection" state on its own once this
+                                        // is null, so there is nothing to
+                                        // navigate away from.
+                                        userCoinData = null
+                                        noteText = ""
+                                        imageUrl = null
+                                    }
+                                    .onFailure { snackbarHostState.showSnackbar(saveFailedMsg) }
+                            }
+                        }
+                    },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text(
+                        stringResource(
+                            if (userCoinData?.status == "wishlist")
+                                R.string.catalog_action_remove_wishlist
+                            else R.string.catalog_action_remove_owned
+                        )
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRemoveDialog = false }) {
+                    Text(stringResource(R.string.common_cancel))
+                }
+            }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -1325,7 +1379,27 @@ fun CoinDetailScreen(navController: NavController, coinId: String) {
                                 }
                             }
                             Spacer(Modifier.height(Spacing.lg))
-                            OutlinedTextField(value = noteText, onValueChange = { noteText = it }, label = { Text(stringResource(R.string.catalog_notes_label)) }, modifier = Modifier.fillMaxWidth())
+                            OutlinedTextField(
+                                value = noteText,
+                                onValueChange = { noteText = it },
+                                label = { Text(stringResource(R.string.catalog_notes_label)) },
+                                modifier = Modifier.fillMaxWidth(),
+                                // Emptying the field and saving is how a note
+                                // written onto the wrong coin gets taken back:
+                                // the empty string is sent, so the server
+                                // stores "no note" rather than ignoring the
+                                // field the way an omitted one would be.
+                                trailingIcon = {
+                                    if (noteText.isNotEmpty()) {
+                                        IconButton(onClick = { noteText = "" }) {
+                                            Icon(
+                                                Icons.Default.Close,
+                                                contentDescription = stringResource(R.string.catalog_notes_clear)
+                                            )
+                                        }
+                                    }
+                                }
+                            )
                             Button(onClick = {
                                 val currentUserCoin = userCoinData ?: return@Button
                                 scope.launch {
@@ -1337,6 +1411,23 @@ fun CoinDetailScreen(navController: NavController, coinId: String) {
                                     }
                                 }
                             }, modifier = Modifier.fillMaxWidth().padding(top = Spacing.sm)) { Text(stringResource(R.string.common_save)) }
+                            TextButton(
+                                onClick = { showRemoveDialog = true },
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = ButtonDefaults.textButtonColors(
+                                    contentColor = MaterialTheme.colorScheme.error
+                                )
+                            ) {
+                                Icon(Icons.Default.DeleteOutline, null, Modifier.size(18.dp))
+                                Spacer(Modifier.width(Spacing.xs))
+                                Text(
+                                    stringResource(
+                                        if (userCoinData?.status == "wishlist")
+                                            R.string.catalog_action_remove_wishlist
+                                        else R.string.catalog_action_remove_owned
+                                    )
+                                )
+                            }
                         }
                     }
                 } else {
