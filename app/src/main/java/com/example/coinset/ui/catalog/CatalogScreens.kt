@@ -477,27 +477,22 @@ fun PeriodListScreen(navController: NavController, countryId: String, countryNam
         if (isLoading) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
         } else {
-            // Eras as flags, not as rows.
+            // A list, not a grid.
             //
-            // Three identical grey slabs with the same clock glyph told you
-            // nothing: the Empire, the USSR and the Federation were separated
-            // only by their dates, so the screen read as a table of numbers
-            // rather than as a choice between three worlds. A flag is what
-            // people actually recognise an era by.
-            //
-            // The dates stay. They are the signpost that says which way you
-            // are walking - "1721-1917" is how you know the Empire is where
-            // the silver roubles live - so they sit under the flag as the
-            // second line, demoted rather than deleted.
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
+            // The flags were the win here and they stay; the two-column grid
+            // was not. A grid makes the eras look like a set of tiles to
+            // choose from, and they are not a set - they are a sequence, one
+            // after another in time, and a column is the shape a sequence
+            // has. It also reads at one glance per row instead of one per
+            // cell, and it stops a long era name from setting the height of
+            // the row beside it.
+            LazyColumn(
                 modifier = Modifier.padding(padding),
                 contentPadding = PaddingValues(Spacing.lg),
-                horizontalArrangement = Arrangement.spacedBy(Spacing.md),
-                verticalArrangement = Arrangement.spacedBy(Spacing.xl)
+                verticalArrangement = Arrangement.spacedBy(Spacing.sm)
             ) {
                 items(periods, key = { it.id }) { period ->
-                    EraCell(
+                    EraRow(
                         period = period,
                         onClick = { navController.navigate("rulers/${period.id}/${period.name}") }
                     )
@@ -507,48 +502,88 @@ fun PeriodListScreen(navController: NavController, countryId: String, countryNam
     }
 }
 
+/**
+ * One era: its flag, its name, and the years it has coins for.
+ *
+ * The years are the era's *coins*, not its politics. The Empire was
+ * proclaimed in 1721 and this row says 1682, because 1682 is the first year
+ * you can actually open something here - and someone hunting a Peter I denga
+ * is served by the second number and misled by the first. Labelled "Монеты"
+ * for exactly that reason: an unlabelled "1682 — 1917" under "Российская
+ * Империя" doesn't read as a different fact, it reads as a wrong one.
+ *
+ * Shaped like RulerCard on purpose - portrait, name, years, count - because
+ * picking an era and picking a ruler are the same act one level apart.
+ */
 @Composable
-private fun EraCell(period: PeriodResponse, onClick: () -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(MaterialTheme.shapes.medium)
-            .clickable { onClick() }
-            .padding(vertical = Spacing.sm),
-        horizontalAlignment = Alignment.CenterHorizontally
+private fun EraRow(period: PeriodResponse, onClick: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth().clickable { onClick() },
+        shape = MaterialTheme.shapes.medium,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
     ) {
-        EraEmblem(
-            imageUrl = period.imageUrl,
-            name = period.name,
-            size = Dimens.periodFlag
-        )
-        Spacer(Modifier.height(Spacing.md))
-        Text(
-            text = period.name,
-            style = MaterialTheme.typography.titleMedium,
-            textAlign = TextAlign.Center,
-            // Wraps rather than truncates. Reserving a second line for every
-            // name would line the dates up across a row, but it costs a blank
-            // line under every single-line name on every screen - a permanent
-            // gap to fix an occasional one - and cutting a long era name
-            // ("Британский мандат Палестины") to an ellipsis would be worse
-            // than either.
-            maxLines = 3,
-            overflow = TextOverflow.Ellipsis
-        )
-        Text(
-            text = yearRange(period.periodStart, period.periodEnd),
-            style = tabular(MaterialTheme.typography.bodyMedium),
-            color = MaterialTheme.colorScheme.primary
-        )
-        if (period.rulersCount > 0) {
-            Text(
-                text = stringResource(R.string.catalog_rulers_count, period.rulersCount),
-                style = tabular(MaterialTheme.typography.labelSmall),
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+        Row(Modifier.padding(Spacing.md), verticalAlignment = Alignment.CenterVertically) {
+            EraEmblem(
+                imageUrl = period.imageUrl,
+                name = period.name,
+                size = Dimens.periodFlag
+            )
+            Spacer(Modifier.width(Spacing.md))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = period.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                val span = coinYearSpan(period.coinYearMin, period.coinYearMax)
+                if (span != null) {
+                    Text(
+                        text = stringResource(R.string.catalog_period_coin_years, span),
+                        style = tabular(MaterialTheme.typography.labelLarge),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                } else {
+                    // Both Ukrainian eras land here. "1917 — 1921" would have
+                    // promised coins that aren't in the catalog; an empty line
+                    // would have looked like a failure to load. Neither is
+                    // true, and this is.
+                    Text(
+                        text = stringResource(R.string.catalog_period_no_coins),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                if (period.rulersCount > 0) {
+                    Text(
+                        text = stringResource(R.string.catalog_rulers_count, period.rulersCount),
+                        style = tabular(MaterialTheme.typography.labelSmall),
+                        color = MaterialTheme.colorScheme.outline
+                    )
+                }
+            }
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                null,
+                tint = MaterialTheme.colorScheme.outline
             )
         }
     }
+}
+
+/**
+ * The span of years an era has coins for, or null when it has none.
+ *
+ * A single year collapses rather than repeating itself, and the range is
+ * isolated left-to-right: in Hebrew the digits and the dash are all
+ * bidi-neutral, so an unisolated "1682–1917" renders as "1917–1682", which is
+ * not an untidy range but a false one.
+ */
+@Composable
+private fun coinYearSpan(min: Int?, max: Int?): String? {
+    if (min == null || max == null || min <= 0 || max <= 0) return null
+    if (min == max) return min.toString()
+    return ltrIsolate(stringResource(R.string.catalog_year_range, min, max))
 }
 
 /**

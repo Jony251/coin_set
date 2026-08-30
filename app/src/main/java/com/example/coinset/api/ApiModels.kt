@@ -72,7 +72,18 @@ data class PeriodResponse(
     @SerializedName("image_url") val imageUrl: String? = null,
     @SerializedName("created_at") val createdAt: String,
     @SerializedName("country_name") val countryName: String?,
-    @SerializedName("rulers_count") val rulersCount: Int = 0
+    @SerializedName("rulers_count") val rulersCount: Int = 0,
+    // The first and last year the catalog actually holds a coin for, which is
+    // not the era's political span and regularly contradicts it: the Empire
+    // was proclaimed in 1721 but its coins here start in 1682, and the State
+    // of Israel is open-ended while its coins stop at 1985. This is what a
+    // reader is choosing between, so it is what the era list shows.
+    //
+    // Both are null together, and mean "no coins in this era at all" - true
+    // today for both Ukrainian eras. A null pair must never be rendered as a
+    // range with a hole in it.
+    @SerializedName("coin_year_min") val coinYearMin: Int? = null,
+    @SerializedName("coin_year_max") val coinYearMax: Int? = null
 )
 
 data class PeriodWithRulers(

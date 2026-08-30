@@ -153,6 +153,8 @@
     <string name="catalog_year_since">מ־%1$d</string>
     <string name="catalog_periods_count">תקופות: %1$d</string>
     <string name="catalog_rulers_count">שליטים: %1$d</string>
+    <string name="catalog_period_coin_years">מטבעות: %1$s</string>
+    <string name="catalog_period_no_coins">אין עדיין מטבעות</string>
     <string name="catalog_coins_count">מטבעות: %1$d</string>
     <string name="catalog_browse_by_metal">לפי מתכת</string>
     <string name="catalog_show_more">עוד</string>
