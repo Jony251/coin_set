@@ -273,14 +273,23 @@ fun AppBottomBar(navController: NavController) {
 }
 
 /**
- * Standardized navigation logic for tab switching.
+ * Tab switching: a tab button goes to that tab's root.
+ *
+ * It used to save the outgoing stack and restore it on the way back in, which
+ * is the standard recipe and was the wrong one here. Drilling
+ * catalog_root -> periods -> rulers -> coins and then tapping Catalog restored
+ * the stack that had just been saved, so the button put you back on the coin
+ * you were already reading and the catalog root became unreachable from the
+ * bar. The tab bar is how you start over; Back is how you retrace a step.
  */
 private fun navigateToTab(navController: NavController, route: String) {
     navController.navigate(route) {
-        popUpTo(navController.graph.findStartDestination().id) { 
-            saveState = true 
+        // Non-inclusive: the start destination stays beneath, so Back from a
+        // tab root still leaves by the front door instead of closing the app.
+        popUpTo(navController.graph.findStartDestination().id) {
+            saveState = false
         }
         launchSingleTop = true
-        restoreState = true
+        restoreState = false
     }
 }
