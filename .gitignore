@@ -17,3 +17,22 @@ local.properties
 # Environment variables
 .env
 google-services.json
+
+# Agent context notes: local paths, server IP, key locations (repo is public)
+/docs/agents/
+
+# Per-user IDE state
+/.idea/deploymentTargetSelector.xml
+/.idea/deviceManager.xml
+/.idea/planningMode.xml
+
+# AI tool artifacts
+/.artifacts/
+
+# Keys and signing material
+*.pem
+*.jks
+*.keystore
+*.p12
+.env.*
+!.env.example
